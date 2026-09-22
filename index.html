@@ -150,8 +150,8 @@ td { padding:10px; border-bottom:1px solid #eee; }
       <p class="muted">Tap a category. One sale can mix all three. Reports stay separate.</p>
       <div class="qty-row">
         <div class="field">
-          <label>Dami / Qty</label>
-          <input id="rQty" class="ylw" type="number" min="1" value="1">
+          <label id="qtyLbl">Dami / Qty</label>
+          <input id="rQty" class="ylw" type="number" min="1" step="1" value="1">
         </div>
         <button class="btn btn-g" id="addBtn">Add item</button>
       </div>
@@ -220,7 +220,7 @@ td { padding:10px; border-bottom:1px solid #eee; }
         <select id="nCat"><option>Groceries</option><option>Gas station</option><option>Fishing supplies</option></select>
       </div>
       <div><label>Unit</label>
-        <select id="nUnit"><option>btl</option><option>pack</option><option>crate</option><option>pc</option><option>sachet</option><option>cup</option><option>can</option></select>
+        <select id="nUnit"><option>btl</option><option>pack</option><option>crate</option><option>pc</option><option>sachet</option><option>cup</option><option>can</option><option>L</option></select>
       </div>
       <div><label>Presyo</label><input id="nPrice" class="ylw" type="number" step="0.01"></div>
     </div>
@@ -552,6 +552,7 @@ function load() {
     if (s.id==="gas") {
       const fuel = new Set(["UNL","PUNL"]);
       d.stores.gas.catalog = d.stores.gas.catalog.filter(c => fuel.has(c.code));
+      d.stores.gas.catalog.forEach(c => { c.unit = "L"; });
     }
   });
   if (!d.staff || (d.staff.length===2 && d.staff[0].name==="Nanay" && d.staff[1].name==="JC")) {
@@ -649,19 +650,27 @@ function searchItems(q) {
   return list.filter(c => haystack(c).includes(q)).slice(0, 16);
 }
 let picked = null;
+function isFuel(it) { return !!(it && (it.unit==="L" || it.store==="gas")); }
+function setQtyMode(it) {
+  const fuel = isFuel(it);
+  $("qtyLbl").textContent = fuel ? "Liters / Litro" : "Dami / Qty";
+  $("rQty").step = fuel ? "0.01" : "1";
+  $("rQty").min = fuel ? "0.01" : "1";
+}
 function renderHits() {
   const q = $("rSearch").value;
   const hits = searchItems(q);
   if (!hits.length) {
     $("hits").innerHTML = '<p class="warn">Walang tama. Type coke, lucky, yosi, load — or add the item in Catalog.</p>';
-    picked = null; return;
+    picked = null; setQtyMode(null); return;
   }
   if (!picked || !hits.find(h => h.code===picked.code && h.store===picked.store)) picked = hits[0];
+  setQtyMode(picked);
   $("hits").innerHTML = hits.map(h =>
     `<button class="hit" data-code="${h.code}" data-store="${h.store}" style="${h.code===picked.code&&h.store===picked.store?'background:#C9A227':''}">
       ${h.photo?`<img src="${h.photo}" alt="">`:""}
       <div><b>${h.name}</b>
-      <span class="muted">${peso(h.price)} · ${h.cat}</span></div>
+      <span class="muted">${peso(h.price)}${isFuel(h)?" / L":""} · ${h.cat}</span></div>
     </button>`
   ).join("");
   $("hits").querySelectorAll(".hit").forEach(b => b.onclick = () => {
@@ -690,7 +699,7 @@ function renderCart() {
     el.innerHTML = DB.cart.map((l,i) => {
       const photo = (findItem(l.code, l.store)||{}).photo;
       return `<div class="line"><div>${photo?`<img class="thumb" src="${photo}" style="width:36px;height:36px;vertical-align:middle;margin-right:6px">`:""}<b>${l.name}</b><div class="muted">${l.cat||""}</div></div>
-       <div>${peso(l.price)}</div><div>×${l.qty}</div>
+       <div>${peso(l.price)}${isFuel(l)?"/L":""}</div><div>${isFuel(l)?Number(l.qty).toLocaleString("en-PH",{maximumFractionDigits:2})+" L":"×"+l.qty}</div>
        <div><b>${peso(l.price*l.qty)}</b> <button data-x="${i}" class="btn-ghost" style="padding:4px 8px;border:0;border-radius:6px">✕</button></div></div>`;
     }).join("");
     el.querySelectorAll("[data-x]").forEach(b => b.onclick = () => { DB.cart.splice(+b.dataset.x,1); save(); renderCart(); });
@@ -707,13 +716,15 @@ $("rSearch").addEventListener("input", renderHits);
 
 $("addBtn").onclick = () => {
   const it = picked || searchItems($("rSearch").value)[0];
-  const qty = Number($("rQty").value||0);
+  const fuel = isFuel(it);
+  let qty = Number($("rQty").value||0);
+  qty = fuel ? Math.round(qty*100)/100 : Math.round(qty);
   if (!it || qty<=0) { sndErr(); alert("Code not found / walang code. Add it on Catalog first."); return; }
-  if (it.cat!=="Load" && it.cat!=="Empties" && onHand(it)<qty)
+  if (!fuel && it.cat!=="Load" && it.cat!=="Empties" && onHand(it)<qty)
     if (!confirm(it.code+" on hand "+onHand(it)+". Sell anyway?")) return;
   const exist = DB.cart.find(l => l.code===it.code && l.store===it.store);
-  if (exist) exist.qty += qty;
-  else DB.cart.push({code:it.code,name:it.name,cat:it.cat,store:it.store,price:Number(it.price),qty});
+  if (exist) exist.qty = fuel ? Math.round((exist.qty+qty)*100)/100 : exist.qty+qty;
+  else DB.cart.push({code:it.code,name:it.name,cat:it.cat,store:it.store,unit:fuel?"L":(it.unit||"pc"),price:Number(it.price),qty});
   $("rSearch").value=""; $("rQty").value=1; save(); renderCart();
   sndAdd();
 };
@@ -748,7 +759,7 @@ $("saveBtn").onclick = () => {
   DB.cart.forEach(l => {
     const sid = storeIdOf(l);
     DB.stores[sid].sales.push({
-      ...rec, code:l.code, name:l.name, cat:l.cat, qty:l.qty,
+      ...rec, code:l.code, name:l.name, cat:l.cat, qty:l.qty, unit:l.unit||"",
       unitPrice:l.price, line:l.price*l.qty, id: Date.now()+"-"+sid+"-"+l.code
     });
     books.add(storeName(sid));
@@ -844,7 +855,7 @@ function renderSales() {
   const rows = [...st().sales].reverse().slice(0,200);
   $("salesTable").innerHTML = "<tr><th>#</th><th>Date</th><th>Who</th><th>Item</th><th>Qty</th><th>Total</th><th>Pay</th></tr>" +
     rows.map(s=>`<tr><td>${s.receipt}</td><td>${s.date} ${s.time||""}</td><td>${s.cashier||""}</td><td>${s.code}<div class="muted">${s.name}</div></td>
-      <td>${s.qty}</td><td>${peso(s.line)}</td><td>${s.payment}</td></tr>`).join("");
+      <td>${s.qty}${s.unit==="L"?" L":""}</td><td>${peso(s.line)}</td><td>${s.payment}</td></tr>`).join("");
 }
 function storeName(id) {
   return (STORES.find(x=>x.id===id)||{}).name || id;
@@ -869,7 +880,7 @@ function reportText(id, from, to) {
   const byWho = {};
   lines.forEach(x => { const w=x.cashier||"?"; byWho[w]=(byWho[w]||0)+Number(x.line); });
   const by = {};
-  lines.forEach(x => { by[x.code]=by[x.code]||{name:x.name,qty:0,peso:0}; by[x.code].qty+=x.qty; by[x.code].peso+=x.line; });
+  lines.forEach(x => { by[x.code]=by[x.code]||{name:x.name,qty:0,peso:0,unit:x.unit||""}; by[x.code].qty+=Number(x.qty); by[x.code].peso+=x.line; });
   const fl = Number((s.settings&&s.settings.float)||0);
   let t = "S&K REGISTER REPORT\n";
   t += "Store: "+storeName(id)+"\n";
@@ -887,7 +898,7 @@ function reportText(id, from, to) {
   Object.keys(byWho).forEach(w => { t += w+": "+peso(byWho[w])+"\n"; });
   if (!Object.keys(byWho).length) t += "(none)\n";
   t += "--------------------------------\nITEMS SOLD\n";
-  Object.entries(by).forEach(([k,v]) => { t += k+"  "+v.name+"  x"+v.qty+"  "+peso(v.peso)+"\n"; });
+  Object.entries(by).forEach(([k,v]) => { t += k+"  "+v.name+"  "+(v.unit==="L"?v.qty+" L":"x"+v.qty)+"  "+peso(v.peso)+"\n"; });
   if (!Object.keys(by).length) t += "(none)\n";
   t += "--------------------------------\nIndependent book — not mixed with other S&K stores.\n";
   return t;
