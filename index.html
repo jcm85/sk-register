@@ -1839,13 +1839,14 @@ function showTutor(on) {
   }
   $("tutorNews").classList.remove("on");
   tutorStep = 0;
-  const picking = !DB.lang;
-  $("tutorPick").style.display = picking ? "block" : "none";
-  $("tutorBubble").style.display = picking ? "none" : "block";
+  $("tutorPick").style.display = "block";
+  $("tutorBubble").style.display = "none";
   $("tutorShade").style.clipPath = "";
   $("tutorRings").innerHTML = "";
   document.body.classList.remove("tutor-cat");
-  if (!picking) renderTutor();
+  $("tutor").querySelectorAll("[data-lang]").forEach(b => {
+    b.style.outline = DB.lang===b.dataset.lang ? "3px solid #C9A227" : "";
+  });
 }
 function finishTutor() {
   ackTutor();
