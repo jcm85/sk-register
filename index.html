@@ -117,8 +117,6 @@ td { padding:10px; border-bottom:1px solid #eee; }
 </head>
 <body>
 <div id="lock">
-  <h2 style="margin:8px 0">Aling store?</h2>
-  <div id="lockStore" class="chips" style="justify-content:center;margin-bottom:12px"></div>
   <h2 style="margin:8px 0;font-size:22px">Sino ang cashier?</h2>
   <p style="opacity:.85">Enter 4-digit PIN</p>
   <div id="lockStaff" class="chips" style="justify-content:center"></div>
@@ -149,6 +147,7 @@ td { padding:10px; border-bottom:1px solid #eee; }
         <input id="rSearch" class="ylw" placeholder="coke  ·  lucky  ·  yosi  ·  oil" autocomplete="off">
       </div>
       <div class="chips" id="catChips"></div>
+      <p class="muted">Tap a category. One sale can mix all three. Reports stay separate.</p>
       <div class="qty-row">
         <div class="field">
           <label>Dami / Qty</label>
@@ -443,24 +442,53 @@ function load() {
   if (!d.current) d.current = "groc";
   if (d.sound===undefined) d.sound = true;
   d.session = d.session || null;
+  if (!Array.isArray(d.cart)) {
+    d.cart = [];
+    STORES.forEach(s => {
+      const book = d.stores[s.id];
+      (book.cart||[]).forEach(line => d.cart.push({...line, store: line.store || s.id}));
+      book.cart = [];
+    });
+  }
+  if (!d.nextRcpt) {
+    d.nextRcpt = Math.max(1001, ...STORES.map(s => Number(d.stores[s.id].settings.nextRcpt)||1001));
+  }
   return d;
 }
 let DB = load();
 function st() { return DB.stores[DB.current]; }
 function save() { localStorage.setItem("kaiah", JSON.stringify(DB)); }
 
+function storeIdOf(it) {
+  if (it && it.store && DB.stores[it.store]) return it.store;
+  const byName = STORES.find(s => s.name===(it&&it.cat));
+  return byName ? byName.id : DB.current;
+}
+function allItems() {
+  const out = [];
+  STORES.forEach(s => {
+    (DB.stores[s.id].catalog||[]).forEach(c => {
+      if (c.active!==false) out.push({...c, store:s.id});
+    });
+  });
+  return out;
+}
+function findItem(code, store) {
+  if (store && DB.stores[store]) {
+    const hit = (DB.stores[store].catalog||[]).find(c => c.code===code);
+    if (hit) return {...hit, store};
+  }
+  for (const s of STORES) {
+    const hit = (DB.stores[s.id].catalog||[]).find(c => c.code===code);
+    if (hit) return {...hit, store:s.id};
+  }
+  return null;
+}
 function showLock(on) {
   $("lock").classList.toggle("on", !!on);
   if (on) {
     $("lockPin").value = "";
     $("lockErr").textContent = "";
-    $("lockStore").innerHTML = STORES.map(s =>
-      `<button type="button" data-sid="${s.id}" style="${s.id===DB.current?'outline:2px solid #C9A227':''}">${s.name}</button>`).join("");
-    $("lockStore").querySelectorAll("button").forEach(b => b.onclick = () => {
-      DB.current = b.dataset.sid;
-      $("lockStore").querySelectorAll("button").forEach(x=>x.style.outline="");
-      b.style.outline = "2px solid #C9A227";
-    });
     $("lockStaff").innerHTML = (DB.staff||[]).map(s =>
       `<button type="button" data-n="${s.name}">${s.name}</button>`).join("");
     $("lockStaff").querySelectorAll("button").forEach(b => b.onclick = () => {
@@ -473,26 +501,33 @@ function showLock(on) {
   }
 }
 function applySession() {
-  const s = STORES.find(x=>x.id===DB.current);
   $("rCashierName").textContent = DB.session || "— tap Switch";
-  $("storeTitle").textContent = "S&K · " + (s?s.name:"Register");
-  $("storeSub").textContent = "S&K · " + (s?s.name:"pick counter") + (DB.session? " · "+DB.session : "");
-  $("rRcpt").value = st().settings.nextRcpt;
+  $("storeTitle").textContent = "S&K Register";
+  $("storeSub").textContent = DB.session ? "Signed in · "+DB.session : "Enter PIN once, then sell any category";
+  $("rRcpt").value = DB.nextRcpt;
 }
 
-function soldQty(code) {
-  return st().sales.filter(s => s.code===code).reduce((a,s)=>a+Number(s.qty),0);
+function soldQty(code, storeId) {
+  const book = DB.stores[storeId] || st();
+  return (book.sales||[]).filter(s => s.code===code).reduce((a,s)=>a+Number(s.qty),0);
 }
-function onHand(it) { return Number(it.start||0) - soldQty(it.code); }
+function onHand(it) { return Number(it.start||0) - soldQty(it.code, storeIdOf(it)); }
 
 function haystack(c) {
   return [c.code, c.name, c.cat, c.unit, c.keys||""].join(" ").toLowerCase();
 }
+let listFilter = "";
 function searchItems(q) {
   q = (q||"").trim().toLowerCase();
-  const list = st().catalog.filter(c => c.active!==false);
-  if (!q) return list.slice(0, 8);
-  return list.filter(c => haystack(c).includes(q)).slice(0, 12);
+  let list = allItems();
+  if (listFilter) list = list.filter(c => c.store===listFilter);
+  if (!q && !listFilter) {
+    const mix = [];
+    STORES.forEach(s => mix.push(...list.filter(c => c.store===s.id).slice(0, 4)));
+    return mix;
+  }
+  if (!q) return list.slice(0, 24);
+  return list.filter(c => haystack(c).includes(q)).slice(0, 16);
 }
 let picked = null;
 function renderHits() {
@@ -502,41 +537,46 @@ function renderHits() {
     $("hits").innerHTML = '<p class="warn">Walang tama. Type coke, lucky, yosi, load — or add the item in Catalog.</p>';
     picked = null; return;
   }
-  if (!picked || !hits.find(h => h.code===picked.code)) picked = hits[0];
+  if (!picked || !hits.find(h => h.code===picked.code && h.store===picked.store)) picked = hits[0];
   $("hits").innerHTML = hits.map(h =>
-    `<button class="hit" data-code="${h.code}" style="${h.code===picked.code?'background:#C9A227':''}">
+    `<button class="hit" data-code="${h.code}" data-store="${h.store}" style="${h.code===picked.code&&h.store===picked.store?'background:#C9A227':''}">
       ${h.photo?`<img src="${h.photo}" alt="">`:`<div class="thumb"></div>`}
       <div><b>${h.name}</b>
       <span class="muted">${peso(h.price)} · ${h.cat}</span></div>
     </button>`
   ).join("");
   $("hits").querySelectorAll(".hit").forEach(b => b.onclick = () => {
-    picked = st().catalog.find(c => c.code===b.dataset.code);
+    picked = findItem(b.dataset.code, b.dataset.store);
     sndTap();
     renderHits();
   });
 }
 function fillChips() {
-  const cats = [...new Set(st().catalog.map(c=>c.cat))];
-  $("catChips").innerHTML = cats.map(c => `<button data-c="${c}">${c}</button>`).join("");
+  const chips = [{id:"", name:"All"}, {id:"groc", name:"Groceries"}, {id:"gas", name:"Gas"}, {id:"fish", name:"Fishing"}];
+  $("catChips").innerHTML = chips.map(c =>
+    `<button type="button" data-sid="${c.id}" style="${listFilter===c.id?'outline:3px solid #C9A227':''}">${c.name}</button>`
+  ).join("");
   $("catChips").querySelectorAll("button").forEach(b => b.onclick = () => {
-    $("rSearch").value = b.dataset.c.toLowerCase();
+    listFilter = b.dataset.sid;
+    sndNav();
+    fillChips();
     renderHits();
   });
 }
 
 function renderCart() {
   const el = $("cart");
-  if (!st().cart.length) { el.innerHTML = '<p class="muted">Cart empty. Magdagdag ng item.</p>'; }
+  if (!DB.cart.length) { el.innerHTML = '<p class="muted">Cart empty. Magdagdag ng item.</p>'; }
   else {
-    el.innerHTML = st().cart.map((l,i) =>
-      `<div class="line"><div>${(st().catalog.find(c=>c.code===l.code)||{}).photo?`<img class="thumb" src="${st().catalog.find(c=>c.code===l.code).photo}" style="width:36px;height:36px;vertical-align:middle;margin-right:6px">`:""}<b>${l.name}</b></div>
+    el.innerHTML = DB.cart.map((l,i) => {
+      const photo = (findItem(l.code, l.store)||{}).photo;
+      return `<div class="line"><div>${photo?`<img class="thumb" src="${photo}" style="width:36px;height:36px;vertical-align:middle;margin-right:6px">`:""}<b>${l.name}</b><div class="muted">${l.cat||""}</div></div>
        <div>${peso(l.price)}</div><div>×${l.qty}</div>
-       <div><b>${peso(l.price*l.qty)}</b> <button data-x="${i}" class="btn-ghost" style="padding:4px 8px;border:0;border-radius:6px">✕</button></div></div>`
-    ).join("");
-    el.querySelectorAll("[data-x]").forEach(b => b.onclick = () => { st().cart.splice(+b.dataset.x,1); save(); renderCart(); });
+       <div><b>${peso(l.price*l.qty)}</b> <button data-x="${i}" class="btn-ghost" style="padding:4px 8px;border:0;border-radius:6px">✕</button></div></div>`;
+    }).join("");
+    el.querySelectorAll("[data-x]").forEach(b => b.onclick = () => { DB.cart.splice(+b.dataset.x,1); save(); renderCart(); });
   }
-  const sub = st().cart.reduce((a,l)=>a+l.price*l.qty,0);
+  const sub = DB.cart.reduce((a,l)=>a+l.price*l.qty,0);
   $("subtotal").textContent = peso(sub);
   const tend = Number($("rTend").value||0);
   const ch = tend ? tend-sub : 0;
@@ -552,9 +592,9 @@ $("addBtn").onclick = () => {
   if (!it || qty<=0) { sndErr(); alert("Code not found / walang code. Add it on Catalog first."); return; }
   if (it.cat!=="Load" && it.cat!=="Empties" && onHand(it)<qty)
     if (!confirm(it.code+" on hand "+onHand(it)+". Sell anyway?")) return;
-  const exist = st().cart.find(l => l.code===it.code);
+  const exist = DB.cart.find(l => l.code===it.code && l.store===it.store);
   if (exist) exist.qty += qty;
-  else st().cart.push({code:it.code,name:it.name,cat:it.cat,price:Number(it.price),qty});
+  else DB.cart.push({code:it.code,name:it.name,cat:it.cat,store:it.store,price:Number(it.price),qty});
   $("rSearch").value=""; $("rQty").value=1; save(); renderCart();
   sndAdd();
 };
@@ -575,29 +615,33 @@ $("lockPin").addEventListener("keydown", e => { if (e.key==="Enter") $("lockGo")
 
 $("saveBtn").onclick = () => {
   if (!DB.session) { sndErr(); showLock(true); alert("Enter staff PIN first."); return; }
-  if (!st().cart.length) { sndErr(); alert("Cart empty."); return; }
-  const sub = st().cart.reduce((a,l)=>a+l.price*l.qty,0);
+  if (!DB.cart.length) { sndErr(); alert("Cart empty."); return; }
+  const sub = DB.cart.reduce((a,l)=>a+l.price*l.qty,0);
   const tend = Number($("rTend").value||0);
   const pay = $("rPay").value;
   if (pay==="Cash" && tend && tend<sub) { sndErr(); alert("Kulanga ang bayad."); return; }
-  const rcpt = Number($("rRcpt").value||st().settings.nextRcpt);
+  const rcpt = Number($("rRcpt").value||DB.nextRcpt);
   const rec = {
     receipt: rcpt, date:$("rDate").value, time:$("rTime").value,
     cashier:DB.session, payment:pay, tendered:tend, change: tend?tend-sub:0
   };
-  st().cart.forEach(l => {
-    st().sales.push({
+  const books = new Set();
+  DB.cart.forEach(l => {
+    const sid = storeIdOf(l);
+    DB.stores[sid].sales.push({
       ...rec, code:l.code, name:l.name, cat:l.cat, qty:l.qty,
-      unitPrice:l.price, line:l.price*l.qty, id: Date.now()+"-"+l.code
+      unitPrice:l.price, line:l.price*l.qty, id: Date.now()+"-"+sid+"-"+l.code
     });
+    books.add(storeName(sid));
   });
-  st().settings.nextRcpt = rcpt+1;
-  st().cart = [];
+  DB.nextRcpt = rcpt+1;
+  STORES.forEach(s => { DB.stores[s.id].settings.nextRcpt = DB.nextRcpt; });
+  DB.cart = [];
   $("rTend").value="";
-  $("rRcpt").value = st().settings.nextRcpt;
+  $("rRcpt").value = DB.nextRcpt;
   save();
   renderCart(); renderAll();
-  $("saveMsg").textContent = "Saved resibo #"+rcpt+". Stock updated.";
+  $("saveMsg").textContent = "Saved resibo #"+rcpt+" · "+[...books].join(", ")+".";
   sndOk();
 };
 
