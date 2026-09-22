@@ -16,7 +16,7 @@
 }
 * { box-sizing:border-box; }
 html,body { margin:0; font-family:Arial,system-ui,sans-serif; background:var(--bg); color:var(--ink); }
-body { padding-bottom:80px; font-size:18px; }
+body { padding-bottom:24px; font-size:18px; }
 header {
   background:var(--g); color:#fff; padding:16px 18px 14px;
   position:sticky; top:0; z-index:20;
@@ -37,11 +37,18 @@ nav button.on { background:var(--g); color:#fff; }
 .card { background:var(--card); border-radius:16px; padding:16px; margin-bottom:14px; box-shadow:0 1px 2px rgba(0,0,0,.06); }
 label { display:block; font-size:15px; color:var(--muted); margin:10px 0 6px; font-weight:700; }
 input, select, textarea {
-  width:100%; padding:16px; border:2px solid #ccc; border-radius:12px;
-  font-size:22px; background:#fff; min-height:56px;
+  width:100%; max-width:100%; min-width:0; padding:16px; border:2px solid #ccc; border-radius:12px;
+  font-size:22px; background:#fff; min-height:56px; box-sizing:border-box;
 }
 input.ylw { background:var(--ylw); }
-.row { display:grid; grid-template-columns:1fr 1fr; gap:12px; min-width:0; }
+#reg input, #reg select, #reg #whoBar {
+  display:block; width:100%; max-width:100%;
+}
+#reg input[type=date], #reg input[type=time] {
+  display:block; width:100%; max-width:100%;
+  -webkit-appearance:none; appearance:none;
+}
+.row { display:grid; grid-template-columns:1fr 1fr; gap:20px; min-width:0; }
 .row > * { min-width:0; }
 .row3 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .btn {
@@ -75,7 +82,7 @@ table { width:100%; border-collapse:collapse; font-size:16px; }
 th { text-align:left; background:var(--g2); color:#fff; padding:10px; font-size:15px; }
 td { padding:10px; border-bottom:1px solid #eee; }
 .sticky-pay {
-  position:sticky; bottom:0; background:#fff; padding:14px; border-top:3px solid var(--g);
+  position:relative; background:#fff; padding:16px; border-top:3px solid var(--g);
 }
 #subtotal, #change { font-size:28px; }
 #rCashierName { font-size:20px; }
@@ -122,40 +129,35 @@ td { padding:10px; border-bottom:1px solid #eee; }
 
 <section class="page on" id="reg">
   <div class="card">
-    <div class="row">
-      <div><label>Petsa / Date</label><input id="rDate" type="date" class="ylw"></div>
-      <div><label>Resibo #</label><input id="rRcpt" class="ylw" inputmode="numeric"></div>
-    </div>
-    <div>
-      <label>Cashier</label>
-      <div id="whoBar">
-        <b id="rCashierName">—</b>
-        <button type="button" class="btn-ghost" id="switchBtn">Switch</button>
-      </div>
-    </div>
-    <div class="row">
-      <div><label>Bayad type</label>
-        <select id="rPay" class="ylw"><option>Cash</option><option>GCash</option><option>Other</option></select>
-      </div>
-      <div><label>Time</label><input id="rTime" type="time" class="ylw"></div>
-    </div>
-  </div>
-  <div class="card">
     <label>Type a word — Coke, lucky, marlboro, load…</label>
     <input id="rSearch" class="ylw" placeholder="coke  ·  lucky  ·  yosi  ·  oil" autocomplete="off">
     <div class="chips" id="catChips"></div>
     <div id="hits"></div>
-    <div class="row" style="margin-top:8px">
-      <div><label>Dami / Qty</label><input id="rQty" class="ylw" type="number" min="1" value="1"></div>
-      <div style="display:flex;align-items:end"><button class="btn btn-g" id="addBtn">Add highlighted item</button></div>
-    </div>
+    <label>Dami / Qty</label>
+    <input id="rQty" class="ylw" type="number" min="1" value="1">
+    <button class="btn btn-g" id="addBtn" style="margin-top:10px">Add item</button>
     <div id="cart"></div>
   </div>
-  <div class="sticky-pay card">
-    <div class="row">
-      <div><span class="muted">Kabuuan</span><b id="subtotal">₱0.00</b></div>
-      <div><label>Bayad / Tendered</label><input id="rTend" class="ylw" type="number" min="0" step="0.01"></div>
+  <div class="card">
+    <label>Petsa / Date</label>
+    <input id="rDate" class="ylw" inputmode="numeric" placeholder="2026-09-22">
+    <label>Resibo #</label>
+    <input id="rRcpt" class="ylw" inputmode="numeric">
+    <label>Cashier</label>
+    <div id="whoBar">
+      <b id="rCashierName">—</b>
+      <button type="button" class="btn-ghost" id="switchBtn">Switch</button>
     </div>
+    <label>Bayad type</label>
+    <select id="rPay" class="ylw"><option>Cash</option><option>GCash</option><option>Other</option></select>
+    <label>Time</label>
+    <input id="rTime" class="ylw" inputmode="numeric" placeholder="05:48">
+  </div>
+  <div class="sticky-pay card">
+    <p class="muted" style="margin:0">Kabuuan</p>
+    <b id="subtotal">₱0.00</b>
+    <label>Bayad / Tendered</label>
+    <input id="rTend" class="ylw" type="number" min="0" step="0.01">
     <p>Sukli / Change: <b id="change">₱0.00</b> <span id="short" class="warn"></span></p>
     <button class="btn btn-a" id="saveBtn">SAVE SALE · I-SAVE ANG BENTA</button>
     <p class="muted" id="saveMsg"></p>
