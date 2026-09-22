@@ -220,7 +220,7 @@ td { padding:10px; border-bottom:1px solid #eee; }
   </div>
   <div class="card" style="overflow:auto"><table id="catTable"></table></div>
   <div class="card" id="itemForm">
-    <p class="muted">Tap an item in the list. Change price, reorder, keywords, or photo, then save.</p>
+    <p class="muted">Fill this in to add an item. To remove one, tap it in the list first.</p>
     <div class="row">
       <div><label>Code</label><input id="nCode" class="ylw" placeholder="PEPSI8"></div>
       <div><label>Name</label><input id="nName" class="ylw" placeholder="Pepsi bottle"></div>
@@ -245,6 +245,7 @@ td { padding:10px; border-bottom:1px solid #eee; }
     <input id="nPhoto" type="file" accept="image/*" capture="environment">
     <p class="muted" id="nPhotoMsg"></p>
     <button class="btn btn-g" id="addItemBtn" style="margin-top:8px">Add item</button>
+    <button class="btn btn-r" id="itemRemove" type="button" style="display:none;margin-top:8px">Remove item</button>
     <button class="btn btn-ghost" id="itemCancel" type="button" style="display:none;margin-top:8px">Cancel</button>
   </div>
 </section>
@@ -596,6 +597,7 @@ function load() {
       });
     }
   }
+  if (!Array.isArray(d.removed)) d.removed = [];
   STORES.forEach(s => {
     if (!d.stores[s.id]) d.stores[s.id] = blankStore(s.name);
     seedFor(s.name).forEach(item => {
@@ -603,6 +605,10 @@ function load() {
       const hits = [];
       book.catalog.forEach((c,i) => { if (c.code===item.code) hits.push(i); });
       const keys = mergeKeys(item.keys, EN_KEYS[item.code]);
+      if ((d.removed||[]).includes(s.id+":"+item.code)) {
+        for (let i = hits.length - 1; i >= 0; i--) book.catalog.splice(hits[i], 1);
+        return;
+      }
       if (!hits.length) { book.catalog.push({...item, keys}); return; }
       book.catalog[hits[0]].keys = mergeKeys(book.catalog[hits[0]].keys, keys);
       if (hits.length > 1) {
@@ -860,6 +866,17 @@ let editingStore = null;
 function esc(s) {
   return String(s??"").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));
 }
+function removedKey(storeId, code) { return storeId+":"+String(code||"").toUpperCase(); }
+function markRemoved(storeId, code) {
+  if (!Array.isArray(DB.removed)) DB.removed = [];
+  const k = removedKey(storeId, code);
+  if (!DB.removed.includes(k)) DB.removed.push(k);
+}
+function unmarkRemoved(storeId, code) {
+  if (!Array.isArray(DB.removed)) DB.removed = [];
+  const k = removedKey(storeId, code);
+  DB.removed = DB.removed.filter(x => x!==k);
+}
 function storeIdByName(name) {
   const s = STORES.find(x => x.name===name);
   return s ? s.id : DB.current;
@@ -894,6 +911,7 @@ function clearItemForm() {
   $("nPhoto").value = "";
   $("nPhotoMsg").textContent = "";
   $("addItemBtn").textContent = "Add item";
+  $("itemRemove").style.display = "none";
   $("itemCancel").style.display = "none";
   const s = STORES.find(x => x.id===DB.current);
   if (s) $("nCat").value = s.name;
@@ -914,6 +932,7 @@ function openItem(c, storeId) {
   $("nPhoto").value = "";
   $("nPhotoMsg").textContent = c.photo ? "Current photo stays unless you choose a new one." : "No photo yet.";
   $("addItemBtn").textContent = "Save changes";
+  $("itemRemove").style.display = "block";
   $("itemCancel").style.display = "block";
   renderCat();
   $("itemForm").scrollIntoView({behavior:"smooth", block:"start"});
@@ -943,6 +962,22 @@ $("nPhoto").onchange = () => {
   $("nPhotoMsg").textContent = $("nPhoto").files[0] ? "Photo ready — tap Save" : ($("nPhotoMsg").textContent||"");
 };
 $("itemCancel").onclick = () => { clearItemForm(); renderCat(); };
+$("itemRemove").onclick = () => {
+  if (!editingCode || !editingStore) return;
+  const book = DB.stores[editingStore];
+  const it = (book.catalog||[]).find(c => c.code===editingCode);
+  if (!it) return;
+  if (!confirm("Remove "+it.name+" ("+it.code+") from the catalog? Past sales stay.")) return;
+  const code = editingCode;
+  const sid = editingStore;
+  book.catalog = book.catalog.filter(c => c.code!==code);
+  markRemoved(sid, code);
+  DB.cart = (DB.cart||[]).filter(l => !(l.code===code && (l.store||sid)===sid));
+  clearItemForm();
+  save();
+  renderCat(); renderStock(); renderHits();
+  $("nPhotoMsg").textContent = "Removed "+code;
+};
 $("addItemBtn").onclick = async () => {
   const code = $("nCode").value.trim().toUpperCase();
   if (!code || !$("nName").value.trim()) { alert("Need code and name"); return; }
@@ -970,6 +1005,8 @@ $("addItemBtn").onclick = async () => {
   if (oldCode && oldCode!==code) {
     (DB.stores[srcId].sales||[]).forEach(s => { if (s.code===oldCode) s.code = code; });
   }
+  if (oldCode && (destId!==srcId || oldCode!==code)) markRemoved(srcId, oldCode);
+  unmarkRemoved(destId, code);
   if (destId!==srcId) {
     if (ix>=0) src.splice(ix, 1);
     const dest = DB.stores[destId].catalog;
