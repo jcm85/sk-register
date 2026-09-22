@@ -16,6 +16,7 @@
 }
 * { box-sizing:border-box; }
 html,body { margin:0; font-family:Arial,system-ui,sans-serif; background:var(--bg); color:var(--ink); }
+html { overflow-x:clip; }
 body { padding-bottom:24px; font-size:18px; }
 header {
   background:var(--g); color:#fff; padding:10px 12px;
@@ -187,15 +188,21 @@ td { padding:10px; border-bottom:1px solid #eee; }
 body.tutor-on { overflow:hidden; }
 body.tutor-cat .cat-list { max-height:120px; }
 #lockBox { max-width:420px; margin:0 auto; }
-#drawerScrim { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:85; }
-#drawerScrim.on { display:block; }
-#drawer {
-  position:fixed; top:0; left:0; bottom:0; width:min(380px, 90vw); z-index:86;
-  background:#fffdf8; color:var(--ink); display:flex; flex-direction:column;
-  transform:translateX(-105%); transition:transform .2s ease;
-  box-shadow:8px 0 28px rgba(0,0,0,.2);
+#drawerScrim {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:85;
+  visibility:hidden; pointer-events:none;
 }
-#drawer.on { transform:none; }
+#drawerScrim.on { display:block; visibility:visible; pointer-events:auto; }
+#drawer {
+  position:fixed; top:0; bottom:0; left:0; width:min(380px, 90vw); max-width:90vw; z-index:86;
+  background:#fffdf8; color:var(--ink); display:flex; flex-direction:column;
+  transform:translate3d(-120%,0,0); visibility:hidden; pointer-events:none;
+  box-shadow:none; clip-path:inset(0 0 0 100%);
+}
+#drawer.on {
+  transform:translate3d(0,0,0); visibility:visible; pointer-events:auto;
+  box-shadow:8px 0 28px rgba(0,0,0,.2); clip-path:none;
+}
 .drawer-head {
   display:flex; align-items:center; justify-content:space-between; gap:8px;
   background:var(--g); color:#fff; padding:14px 12px 14px 16px;
@@ -2097,8 +2104,15 @@ function openDrawer(tab) {
   sndNav();
 }
 function closeDrawer() {
-  $("drawer").classList.remove("on");
-  $("drawerScrim").classList.remove("on");
+  const drawer = $("drawer");
+  const scrim = $("drawerScrim");
+  drawer.classList.remove("on");
+  scrim.classList.remove("on");
+  drawer.style.transform = "";
+  drawer.style.visibility = "";
+  drawer.style.width = "";
+  scrim.style.display = "";
+  scrim.style.visibility = "";
 }
 function startTutor() {
   closeDrawer();
