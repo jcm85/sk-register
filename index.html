@@ -2,12 +2,231 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="0;url=https://effulgent-caramel-6eb31b.netlify.app/">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1B4D3E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="S&K">
+<meta name="description" content="Offline merchandise register for the S&K gas station. Cash, GCash, and Other. Sales stay on this device.">
 <title>S&K Register</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="app.css">
 </head>
-<body style="font-family:Arial;padding:24px">
-<p><a href="https://effulgent-caramel-6eb31b.netlify.app/">Open S&K Register</a></p>
-<p>If this does not jump, tap the link. Full till lives at that address until the complete index.html is uploaded from a computer.</p>
+<body>
+<header>
+  <div class="header-row">
+    <div>
+      <h1>S&K Register</h1>
+      <p id="net">Saved on this device</p>
+    </div>
+    <div class="header-side">
+      <div class="rcpt-pill"><span>Resibo #</span><b id="headRcpt">1001</b></div>
+      <button type="button" class="header-backup" id="backupBtn">Backup</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="page on" id="page-sell">
+    <p id="sampleNote" class="sample-note"></p>
+    <p id="lastSale" class="last-sale" hidden></p>
+    <div class="sell-layout">
+      <div class="card">
+        <div class="find-row">
+          <div>
+            <label for="search">Hanapin / Search</label>
+            <input id="search" class="ylw" placeholder="Coke, lucky, yosi, load" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+          </div>
+          <div>
+            <label for="qty">Dami</label>
+            <div class="stepper">
+              <button type="button" id="qtyMinus" aria-label="Decrease quantity">−</button>
+              <input id="qty" class="ylw" inputmode="numeric" value="1" aria-label="Dami">
+              <button type="button" id="qtyPlus" aria-label="Increase quantity">+</button>
+            </div>
+          </div>
+        </div>
+        <div id="chips" class="chips"></div>
+        <div id="grid" class="grid"></div>
+      </div>
+
+      <aside class="card pay-panel" id="payPanel">
+        <div id="cart" class="cart" aria-live="polite"></div>
+        <div class="pay-foot">
+          <div class="total-row">
+            <span>Kabuuan</span>
+            <b id="total">₱0.00</b>
+          </div>
+          <div class="pay-picks" role="group" aria-label="Bayad type">
+            <button type="button" class="pay on" data-pay="Cash">Cash</button>
+            <button type="button" class="pay" data-pay="GCash">GCash</button>
+            <button type="button" class="pay" data-pay="Other">Other</button>
+          </div>
+          <label for="tender">Bayad / Tendered</label>
+          <div class="tender-row">
+            <input id="tender" class="ylw" inputmode="decimal" placeholder="0.00" autocomplete="off">
+            <button type="button" id="exactBtn" class="btn btn-ghost">Sakto</button>
+          </div>
+          <div class="bills" id="bills">
+            <button type="button" data-bill="20">₱20</button>
+            <button type="button" data-bill="50">₱50</button>
+            <button type="button" data-bill="100">₱100</button>
+            <button type="button" data-bill="200">₱200</button>
+            <button type="button" data-bill="500">₱500</button>
+            <button type="button" data-bill="1000">₱1k</button>
+          </div>
+          <p class="change-line">Sukli <b id="change" aria-live="polite">—</b></p>
+          <p id="payHint" class="muted"></p>
+          <p id="saveMsg" class="warn" hidden></p>
+          <button type="button" id="saveBtn" class="btn btn-amber" disabled>SAVE SALE · I-SAVE</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="page" id="page-catalog">
+    <div class="card">
+      <h2>Add item</h2>
+      <p class="muted">New rows are yours. They are not marked SAMPLE.</p>
+      <label for="newName">Name</label>
+      <input id="newName" class="ylw" autocomplete="off">
+      <div class="row">
+        <div>
+          <label for="newCat">Category</label>
+          <input id="newCat" class="ylw" list="catList" value="Drinks" autocomplete="off">
+          <datalist id="catList"></datalist>
+        </div>
+        <div>
+          <label for="newPrice">Presyo ₱</label>
+          <input id="newPrice" class="ylw" inputmode="decimal" autocomplete="off">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="newStock">Start stock</label>
+          <input id="newStock" class="ylw" inputmode="numeric" value="0">
+        </div>
+        <div>
+          <label for="newReo">Reorder at</label>
+          <input id="newReo" class="ylw" inputmode="numeric" value="5">
+        </div>
+      </div>
+      <label for="newKeys">Keywords / ibang tawag</label>
+      <input id="newKeys" class="ylw" placeholder="coke, kola, mismo" autocomplete="off">
+      <label class="check" for="newTrack"><input id="newTrack" type="checkbox" checked> Track stock</label>
+      <button type="button" id="addItem" class="btn btn-green">Add item</button>
+      <p id="addMsg" class="muted"></p>
+    </div>
+    <label for="catalogFilter">Find in catalog</label>
+    <input id="catalogFilter" class="ylw" placeholder="Name or keyword" autocomplete="off">
+    <div id="catalogList"></div>
+  </section>
+
+  <section class="page" id="page-journal">
+    <div class="card">
+      <h2>Resibo</h2>
+      <p class="muted">Posted rows stay as they are. Void a receipt if the sale was a mistake. Stock goes back.</p>
+      <label for="journalFind">Hanapin</label>
+      <input id="journalFind" class="ylw" placeholder="Resibo # or item" autocomplete="off">
+      <div class="seg" role="group" aria-label="Which receipts">
+        <button type="button" id="journalToday" class="on">Today</button>
+        <button type="button" id="journalAll">All</button>
+      </div>
+    </div>
+    <div id="journalList"></div>
+  </section>
+
+  <section class="page" id="page-close">
+    <div class="card">
+      <h2>Daily close</h2>
+      <label for="closeDate">Petsa / Date</label>
+      <input id="closeDate" class="ylw" type="date">
+      <div class="kpi" id="closeKpis"></div>
+    </div>
+    <div class="card">
+      <label for="floatIn">Opening float / perang panimula ₱</label>
+      <input id="floatIn" class="ylw" inputmode="decimal" placeholder="0" autocomplete="off">
+      <label for="countIn">Counted cash / bilang na pera ₱</label>
+      <input id="countIn" class="ylw" inputmode="decimal" placeholder="Count the drawer" autocomplete="off">
+      <p id="closeExpect" class="expect"></p>
+    </div>
+    <div class="card">
+      <h2>Items sold</h2>
+      <div class="table-wrap"><table id="closeItems"></table></div>
+    </div>
+  </section>
+
+  <section class="page" id="page-stock">
+    <div class="card">
+      <h2>Stock</h2>
+      <p id="stockAlert" class="muted"></p>
+      <label for="stockFilter">Find</label>
+      <input id="stockFilter" class="ylw" placeholder="Name" autocomplete="off">
+    </div>
+    <div id="stockList"></div>
+  </section>
+
+  <section class="page" id="page-backup">
+    <div class="card">
+      <h2>Backup</h2>
+      <p class="muted">Sales live in this browser only. When the signal is up, export the file and put it in the Google Drive folder <b>S&K Register</b>. Import that file here to restore this device.</p>
+      <button type="button" id="expJson" class="btn btn-amber">Export JSON</button>
+      <button type="button" id="expCsv" class="btn btn-ghost">Export sales CSV</button>
+      <label for="impFile">Import backup</label>
+      <input id="impFile" type="file" accept="application/json,.json">
+      <p id="backupMsg" class="muted"></p>
+    </div>
+    <div class="card">
+      <h2>Practice data</h2>
+      <p class="muted">SAMPLE rows are a practice list. Mark real in Catalog when the presyo is the one you charge.</p>
+      <button type="button" id="clearSales" class="btn btn-danger">Clear sales</button>
+      <button type="button" id="resetSamples" class="btn btn-ghost">Reset SAMPLE items</button>
+    </div>
+    <div class="card">
+      <p class="muted">Install: Safari Share → Add to Home Screen. Open it once online. After that the till works with the connection off. Merchandise only — this book does not ring fuel.</p>
+    </div>
+  </section>
+</main>
+
+<nav class="tabbar" aria-label="Sections">
+  <button type="button" class="tab on" data-page="sell">Benta</button>
+  <button type="button" class="tab" data-page="catalog">Catalog</button>
+  <button type="button" class="tab" data-page="journal">Resibo</button>
+  <button type="button" class="tab" data-page="close">Close</button>
+  <button type="button" class="tab" data-page="stock">Stock</button>
+</nav>
+
+<div id="miniBar" class="mini-bar empty">
+  <div>
+    <div>Kabuuan <b id="miniTotal">₱0.00</b></div>
+    <div class="mini-change">Sukli <b id="miniChange">—</b></div>
+  </div>
+  <button type="button" id="miniJump">Bayad</button>
+</div>
+
+<div id="modal" class="modal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mRcptLabel">
+    <p class="sheet-kicker">S&K Register</p>
+    <p id="mRcptLabel" class="k">Resibo #</p>
+    <h2 id="mRcpt">#1001</h2>
+    <p id="mWhen" class="muted"></p>
+    <div id="mLines"></div>
+    <div class="sheet-row"><span>Kabuuan</span><b id="mTotal"></b></div>
+    <div class="sheet-row"><span id="mPay"></span><b id="mTender"></b></div>
+    <p class="sukli-label">Sukli</p>
+    <p id="mChange" class="sukli">₱0.00</p>
+    <p id="mVoided" class="warn" hidden>VOID</p>
+    <button type="button" id="mPrint" class="btn btn-ghost">Print</button>
+    <button type="button" id="mNext" class="btn btn-amber">Done · Tapos</button>
+  </div>
+</div>
+
+<noscript>
+  <p style="padding:24px;font-family:sans-serif">S&K Register needs JavaScript. It still works offline after the first open.</p>
+</noscript>
+<script src="app.js"></script>
 </body>
 </html>
