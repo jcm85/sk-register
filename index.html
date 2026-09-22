@@ -163,6 +163,7 @@ input.ylw, select.ylw { background:var(--ylw); }
   .hit img, .thumb { width:52px; height:52px; }
   input.hit-qty, .hit-add { min-height:56px; width:64px; flex:0 0 64px; font-size:16px; }
   .hit-row { gap:6px; }
+  .fav-btn { font-size:13px; padding:8px 10px; min-height:40px; max-width:calc(50% - 4px); }
   .card { padding:12px; }
   .search-row .btn { min-height:48px; padding:10px 14px; }
   input, select, textarea { min-height:48px; font-size:18px; }
@@ -248,6 +249,25 @@ input.ylw, select.ylw { background:var(--ylw); }
 .hit b { display:block; font-size:22px; }
 .hit img, .thumb { width:72px; height:72px; object-fit:cover; border-radius:10px; background:#ddd; flex-shrink:0; }
 .hit-row { display:flex; gap:8px; align-items:center; margin:8px 0; }
+#favWrap { margin:8px 0 4px; max-width:100%; overflow-x:hidden; }
+#favWrap .fav-label { font-size:14px; font-weight:700; color:var(--muted); margin:0 0 6px; }
+#favRow {
+  display:flex; flex-wrap:wrap; gap:8px;
+  max-width:100%;
+}
+.fav-btn {
+  border:0; background:var(--cream); color:var(--ink);
+  padding:10px 12px; border-radius:10px; font-size:14px; font-weight:700;
+  min-height:44px; max-width:100%;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.fav-btn:active { background:var(--amber); }
+.stock-acts { display:flex; flex-wrap:wrap; gap:6px; }
+.stock-acts .btn { width:auto; margin:0; padding:8px 10px; min-height:40px; font-size:14px; }
+#itemStockActs .search-row { margin-top:4px; }
+#nFavWrap { display:flex; align-items:center; gap:8px; margin-top:10px; }
+#nFavWrap input { width:auto; min-height:28px; margin:0; }
+#reprintBtn { margin-top:8px; }
 input.hit-qty { width:84px; flex:0 0 84px; min-height:72px; text-align:center; padding:8px; font-size:22px; }
 .hit-add { width:84px; flex:0 0 84px; min-height:72px; padding:8px 6px; font-size:18px; }
 .chips { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
@@ -484,6 +504,10 @@ body.lock-on { overflow:hidden; }
       </div>
       <div class="chips" id="catChips"></div>
       <p class="muted">Tap a category. Set the quantity beside the item, then tap Add.</p>
+      <div id="favWrap">
+        <p class="fav-label">Mabilis</p>
+        <div id="favRow"></div>
+      </div>
       <div id="hits"></div>
     </div>
     <div class="reg-side">
@@ -534,6 +558,7 @@ body.lock-on { overflow:hidden; }
           </div>
         </div>
         <button class="btn btn-a" id="saveBtn">SAVE SALE · I-SAVE ANG BENTA</button>
+        <button class="btn btn-ghost" id="reprintBtn" type="button" style="display:none">Reprint last / I-print muli</button>
         <p class="muted" id="saveMsg"></p>
       </div>
     </div>
@@ -574,6 +599,16 @@ body.lock-on { overflow:hidden; }
     </div>
     <label>Keywords / ibang tawag (comma)</label>
     <input id="nKeys" class="ylw" placeholder="coke, kola, mismo, red">
+    <label id="nFavWrap"><input id="nFav" type="checkbox"> Favorite / Mabilis (star on Register)</label>
+    <div id="itemStockActs" style="display:none">
+      <label>Dumating / Receive stock</label>
+      <div class="search-row">
+        <input id="nRecvQty" class="ylw" type="number" min="1" step="1" value="1" inputmode="numeric">
+        <button type="button" class="btn btn-g" id="nRecvBtn">Receive</button>
+      </div>
+      <button type="button" class="btn btn-ghost" id="nOpenCrate" style="display:none;margin-top:8px">Open crate</button>
+      <p class="muted" id="nStockMsg"></p>
+    </div>
     <label>Picture / larawan (iPad camera or photo library)</label>
     <input id="nPhoto" type="file" accept="image/*" capture="environment">
     <p class="muted" id="nPhotoMsg"></p>
@@ -585,8 +620,8 @@ body.lock-on { overflow:hidden; }
 
 <section class="page" id="stock">
   <div class="card">
-    <p><b>On-hand vs start (this store)</b></p>
-    <p class="muted">Green bar = pieces left. Short bar = almost out.</p>
+    <p><b>On-hand = start + received − sold − opened</b></p>
+    <p class="muted">Dumating adds received stock. Open crate turns 1 crate into bottles. Start stock is not reset.</p>
     <div id="stockBars"></div>
   </div>
   <div class="card" style="overflow:auto"><table id="stockTable"></table></div>
@@ -990,9 +1025,62 @@ function load() {
   if (!d.nextRcpt) {
     d.nextRcpt = Math.max(1001, ...STORES.map(s => Number(d.stores[s.id].settings.nextRcpt)||1001));
   }
+  if (!d.recv || typeof d.recv!=="object") d.recv = {};
+  if (!d.opened || typeof d.opened!=="object") d.opened = {};
+  if (d.lastRcpt===undefined) d.lastRcpt = null;
+  seedFavsIfNeeded(d);
   return d;
 }
+function favKey(storeId, code) { return storeId+":"+String(code||"").toUpperCase(); }
+function catalogHas(d, storeId, code) {
+  return !!(d.stores[storeId] && (d.stores[storeId].catalog||[]).some(c => c.code===code && c.active!==false));
+}
+function seedFavsIfNeeded(d) {
+  if (Array.isArray(d.fav) && d.fav.length) return;
+  const fav = [];
+  const push = (sid, code) => {
+    if (fav.length>=8) return;
+    const k = favKey(sid, code);
+    if (fav.includes(k)) return;
+    if (catalogHas(d, sid, code)) fav.push(k);
+  };
+  push("groc", "COKE8");
+  push("groc", "COKE15");
+  push("groc", "PEPSI8");
+  ["YUM-HD","YUM-TO","CHUMZ","FISHCK","BAWANG","ALI-SW","ALI-BBQ"].forEach(code => push("groc", code));
+  STORES.forEach(s => {
+    (d.stores[s.id].catalog||[]).forEach(c => {
+      if (fav.length>=8) return;
+      const hay = ((c.name||"")+" "+(c.keys||"")).toLowerCase();
+      if (!/(^|[^a-z])(kape|coffee|kopiko|nescafe|nescaf)([^a-z]|$)/.test(hay) && !hay.includes("great taste")) return;
+      push(s.id, c.code);
+    });
+  });
+  STORES.forEach(s => {
+    (d.stores[s.id].catalog||[]).forEach(c => {
+      if (fav.length>=8) return;
+      if (c.cat==="Load" || /\bload\b/i.test(c.keys||"") || /\bload\b/i.test(c.name||"")) push(s.id, c.code);
+    });
+  });
+  d.fav = fav;
+}
 let DB = load();
+let IDLE_MS = 120000;
+let idleTimer = null;
+function idlePaused() {
+  return $("tutor") && $("tutor").classList.contains("on");
+}
+function bumpIdle() {
+  if (idleTimer) clearTimeout(idleTimer);
+  idleTimer = null;
+  if (idlePaused()) return;
+  if ($("lock") && $("lock").classList.contains("on")) return;
+  idleTimer = setTimeout(() => {
+    if (idlePaused()) return;
+    if ($("lock") && $("lock").classList.contains("on")) return;
+    showLock(true);
+  }, IDLE_MS);
+}
 function st() { return DB.stores[DB.current]; }
 function save() { localStorage.setItem("kaiah", JSON.stringify(DB)); }
 
@@ -1024,8 +1112,9 @@ function findItem(code, store) {
 function showLock(on) {
   $("lock").classList.toggle("on", !!on);
   document.body.classList.toggle("lock-on", !!on);
-  if (!on) maybeTutorNews();
+  if (!on) { maybeTutorNews(); bumpIdle(); }
   if (on) {
+    if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
     $("lockPin").value = "";
     $("lockErr").textContent = "";
     $("lockStaff").innerHTML = (DB.staff||[]).map(s =>
@@ -1050,7 +1139,103 @@ function soldQty(code, storeId) {
   const book = DB.stores[storeId] || st();
   return (book.sales||[]).filter(s => s.code===code).reduce((a,s)=>a+Number(s.qty),0);
 }
-function onHand(it) { return Number(it.start||0) - soldQty(it.code, storeIdOf(it)); }
+function stockKey(storeId, code) { return storeId+":"+String(code||"").toUpperCase(); }
+function recvQty(code, storeId) { return Number((DB.recv||{})[stockKey(storeId, code)]||0); }
+function openedQty(code, storeId) { return Number((DB.opened||{})[stockKey(storeId, code)]||0); }
+function onHand(it) {
+  const sid = storeIdOf(it);
+  return Number(it.start||0) + recvQty(it.code, sid) - soldQty(it.code, sid) - openedQty(it.code, sid);
+}
+const CRATE_BOTTLE = { COKECS:{ bottle:"COKE8", packSize:24 } };
+function crateInfo(it) {
+  if (!it) return null;
+  const sid = storeIdOf(it);
+  const mapped = CRATE_BOTTLE[it.code];
+  if (mapped) {
+    const bottle = findItem(mapped.bottle, sid);
+    if (!bottle) return null;
+    return { bottleCode: mapped.bottle, packSize: mapped.packSize, bottle };
+  }
+  const pack = Number(it.packSize||0);
+  const bottleCode = it.bottleCode || it.packOf || "";
+  if ((it.unit==="crate" || pack>0) && bottleCode) {
+    const bottle = findItem(bottleCode, sid);
+    if (!bottle || !(pack>0)) return null;
+    return { bottleCode, packSize: pack, bottle };
+  }
+  return null;
+}
+function receiveStock(storeId, code, qty) {
+  qty = Math.round(Number(qty));
+  if (!(qty>0)) { sndErr(); alert("Enter a quantity / dami."); return false; }
+  if (!DB.recv || typeof DB.recv!=="object") DB.recv = {};
+  const k = stockKey(storeId, code);
+  DB.recv[k] = Number(DB.recv[k]||0) + qty;
+  save();
+  return true;
+}
+function openCrate(storeId, code) {
+  const it = findItem(code, storeId);
+  const info = crateInfo(it);
+  if (!info) { sndErr(); return false; }
+  if (onHand(it) < 1) { sndErr(); alert("No crate on hand."); return false; }
+  if (!DB.opened || typeof DB.opened!=="object") DB.opened = {};
+  if (!DB.recv || typeof DB.recv!=="object") DB.recv = {};
+  const ck = stockKey(storeId, code);
+  const bk = stockKey(storeId, info.bottleCode);
+  DB.opened[ck] = Number(DB.opened[ck]||0) + 1;
+  DB.recv[bk] = Number(DB.recv[bk]||0) + info.packSize;
+  save();
+  return true;
+}
+function isFav(storeId, code) {
+  return (DB.fav||[]).includes(favKey(storeId, code));
+}
+function setFav(storeId, code, on) {
+  if (!Array.isArray(DB.fav)) DB.fav = [];
+  const k = favKey(storeId, code);
+  if (on) { if (!DB.fav.includes(k)) DB.fav.push(k); }
+  else DB.fav = DB.fav.filter(x => x!==k);
+  save();
+  renderFavs();
+}
+function renderFavs() {
+  const el = $("favRow");
+  if (!el) return;
+  const keys = Array.isArray(DB.fav) ? DB.fav : [];
+  const items = keys.map(k => {
+    const i = k.indexOf(":");
+    if (i<0) return null;
+    return findItem(k.slice(i+1), k.slice(0,i));
+  }).filter(Boolean);
+  if (!items.length) {
+    el.innerHTML = '<span class="muted">Mark favorites in Catalog.</span>';
+    return;
+  }
+  el.innerHTML = items.map(it =>
+    `<button type="button" class="fav-btn" data-store="${esc(it.store)}" data-code="${esc(it.code)}">${esc(it.name)}</button>`
+  ).join("");
+  el.querySelectorAll(".fav-btn").forEach(b => {
+    b.onclick = () => {
+      const it = findItem(b.dataset.code, b.dataset.store);
+      if (!it) return;
+      if (isFuel(it) && Number(it.price)<=0) { sndErr(); alert("Set a pump price first."); return; }
+      let qty = 1;
+      const row = $("hits").querySelector('.hit-row[data-code="'+CSS.escape(it.code)+'"][data-store="'+CSS.escape(it.store)+'"]');
+      if (row) {
+        const box = row.querySelector(".hit-qty");
+        if (box && box.value!=="") qty = box.value;
+      }
+      addLine(it, qty);
+    };
+  });
+}
+function updateReprintBtn() {
+  const btn = $("reprintBtn");
+  if (!btn) return;
+  btn.style.display = DB.lastRcpt ? "block" : "none";
+  syncPhonePayHeight();
+}
 
 function haystack(c) {
   return [c.code, c.name, c.cat, c.unit, c.keys||""].join(" ").toLowerCase();
@@ -1214,10 +1399,12 @@ $("saveBtn").onclick = () => {
   DB.nextRcpt = rcpt+1;
   STORES.forEach(s => { DB.stores[s.id].settings.nextRcpt = DB.nextRcpt; });
   DB.cart = [];
+  DB.lastRcpt = rcpt;
   $("rTend").value="";
   $("rRcpt").value = DB.nextRcpt;
   save();
   renderCart(); renderAll();
+  updateReprintBtn();
   $("saveMsg").textContent = "Saved resibo #"+rcpt+" · "+[...books].join(", ")+".";
   sndOk();
 };
@@ -1291,6 +1478,11 @@ function clearItemForm() {
   $("nReo").value = "5";
   $("nPhoto").value = "";
   $("nPhotoMsg").textContent = "";
+  if ($("nFav")) $("nFav").checked = false;
+  if ($("nRecvQty")) $("nRecvQty").value = "1";
+  if ($("nStockMsg")) $("nStockMsg").textContent = "";
+  if ($("itemStockActs")) $("itemStockActs").style.display = "none";
+  if ($("nOpenCrate")) $("nOpenCrate").style.display = "none";
   $("addItemBtn").textContent = "Add item";
   $("itemRemove").style.display = "none";
   $("itemCancel").style.display = "none";
@@ -1312,6 +1504,15 @@ function openItem(c, storeId) {
   $("nKeys").value = c.keys || "";
   $("nPhoto").value = "";
   $("nPhotoMsg").textContent = c.photo ? "Current photo stays unless you choose a new one." : "No photo yet.";
+  if ($("nFav")) $("nFav").checked = isFav(editingStore, c.code);
+  if ($("itemStockActs")) $("itemStockActs").style.display = "block";
+  if ($("nRecvQty")) $("nRecvQty").value = "1";
+  if ($("nStockMsg")) {
+    const oh = onHand({...c, store:editingStore});
+    $("nStockMsg").textContent = "On hand now: "+oh+" (start "+Number(c.start||0)+" + recv "+recvQty(c.code, editingStore)+" − sold "+soldQty(c.code, editingStore)+" − opened "+openedQty(c.code, editingStore)+")";
+  }
+  const info = crateInfo({...c, store:editingStore});
+  if ($("nOpenCrate")) $("nOpenCrate").style.display = info ? "block" : "none";
   $("addItemBtn").textContent = "Save changes";
   $("itemRemove").style.display = "block";
   $("itemCancel").style.display = "block";
@@ -1361,9 +1562,10 @@ $("itemRemove").onclick = () => {
   book.catalog = book.catalog.filter(c => c.code!==code);
   markRemoved(sid, code);
   DB.cart = (DB.cart||[]).filter(l => !(l.code===code && (l.store||sid)===sid));
+  if (Array.isArray(DB.fav)) DB.fav = DB.fav.filter(k => k!==favKey(sid, code));
   clearItemForm();
   save();
-  renderCat(); renderStock(); renderHits();
+  renderCat(); renderStock(); renderHits(); renderFavs();
   $("nPhotoMsg").textContent = "Removed "+code;
 };
 $("addItemBtn").onclick = async () => {
@@ -1409,19 +1611,55 @@ $("addItemBtn").onclick = async () => {
 };
 
 function renderStock() {
-  $("stockTable").innerHTML = "<tr><th>Code</th><th>Name</th><th>Start</th><th>Sold</th><th>On hand</th><th></th></tr>" +
+  $("stockTable").innerHTML = "<tr><th>Code</th><th>Name</th><th>Start</th><th>Recv</th><th>Sold</th><th>Opened</th><th>On hand</th><th></th></tr>" +
     st().catalog.map(c => {
-      const oh = onHand(c), low = oh<=Number(c.reo||0) && c.cat!=="Load" && c.cat!=="Empties";
-      return `<tr><td>${c.code}</td><td>${c.name}</td><td>${c.start}</td><td>${soldQty(c.code)}</td>
-        <td><b>${oh}</b></td><td>${low?'<span class="low">LOW / KULANG</span>':''}</td></tr>`;
+      const sid = DB.current;
+      const sold = soldQty(c.code, sid);
+      const recv = recvQty(c.code, sid);
+      const opened = openedQty(c.code, sid);
+      const oh = onHand({...c, store:sid});
+      const low = oh<=Number(c.reo||0) && c.cat!=="Load" && c.cat!=="Empties";
+      const info = crateInfo({...c, store:sid});
+      return `<tr data-code="${esc(c.code)}"><td>${esc(c.code)}</td><td>${esc(c.name)}</td><td>${c.start}</td><td>${recv}</td><td>${sold}</td><td>${opened}</td>
+        <td><b>${oh}</b></td><td class="stock-acts">
+          <button type="button" class="btn btn-g stock-recv" data-code="${esc(c.code)}">Dumating</button>
+          ${info?`<button type="button" class="btn btn-ghost stock-open" data-code="${esc(c.code)}">Open crate</button>`:""}
+          ${low?'<span class="low">LOW / KULANG</span>':''}
+        </td></tr>`;
     }).join("");
-  const maxStart = Math.max(1, ...st().catalog.map(c => Number(c.start||0)));
+  $("stockTable").querySelectorAll(".stock-recv").forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const code = b.dataset.code;
+    const raw = prompt("Dumating / Receive — how many of "+code+"?", "1");
+    if (raw===null) return;
+    if (receiveStock(DB.current, code, raw)) {
+      sndOk();
+      renderStock(); renderHits(); renderFavs();
+      if (editingCode===code && editingStore===DB.current) {
+        const it = findItem(code, DB.current);
+        if (it) openItem(it, DB.current);
+      }
+    }
+  });
+  $("stockTable").querySelectorAll(".stock-open").forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const code = b.dataset.code;
+    const it = findItem(code, DB.current);
+    const info = crateInfo(it);
+    if (!info) return;
+    if (!confirm("Open 1 "+code+" → +"+info.packSize+" "+info.bottleCode+"?")) return;
+    if (openCrate(DB.current, code)) {
+      sndOk();
+      renderStock(); renderHits();
+    }
+  });
+  const maxStart = Math.max(1, ...st().catalog.map(c => Number(c.start||0) + recvQty(c.code, DB.current)));
   $("stockBars").innerHTML = st().catalog.map(c => {
-    const oh = Math.max(0, onHand(c));
-    const start = Number(c.start||0) || 1;
-    const pct = Math.min(100, Math.round(100*oh/start));
+    const oh = Math.max(0, onHand({...c, store:DB.current}));
+    const base = Math.max(1, Number(c.start||0) + recvQty(c.code, DB.current));
+    const pct = Math.min(100, Math.round(100*oh/base));
     const low = oh<=Number(c.reo||0) && c.cat!=="Load" && c.cat!=="Empties";
-    return `<div class="barrow"><span>${c.name}</span><div class="bartrk"><div class="barfill" style="width:${pct}%;background:${low?'#B42318':'#2E7D4F'}"></div></div><b>${oh}</b></div>`;
+    return `<div class="barrow"><span>${esc(c.name)}</span><div class="bartrk"><div class="barfill" style="width:${pct}%;background:${low?'#B42318':'#2E7D4F'}"></div></div><b>${oh}</b></div>`;
   }).join("") || "<p class='muted'>No items.</p>";
 }
 function renderSales() {
@@ -2059,10 +2297,12 @@ function showTutor(on) {
     listFilter = "";
     fillChips();
     renderHits();
+    bumpIdle();
     if (!DB.session) showLock(true);
     else maybeTutorNews();
     return;
   }
+  if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
   $("tutorNews").classList.remove("on");
   tutorStep = 0;
   tutorTopic = "";
@@ -2346,7 +2586,8 @@ window.addEventListener("resize", () => {
 });
 
 function renderAll() {
-  fillChips(); renderHits(); renderCart(); renderCat(); renderStock(); renderSales(); renderClose(); renderInv(); renderSet();
+  fillChips(); renderFavs(); renderHits(); renderCart(); renderCat(); renderStock(); renderSales(); renderClose(); renderInv(); renderSet();
+  updateReprintBtn();
 }
 
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
@@ -2368,6 +2609,46 @@ applySession();
 if (!DB.session) showLock(true);
 initTutorStamp();
 maybeTutorNews();
+
+["pointerdown","keydown","touchstart"].forEach(ev => {
+  document.addEventListener(ev, bumpIdle, {passive:true, capture:true});
+});
+bumpIdle();
+
+if ($("nFav")) $("nFav").onchange = () => {
+  if (!editingCode || !editingStore) return;
+  setFav(editingStore, editingCode, $("nFav").checked);
+  sndTap();
+};
+if ($("nRecvBtn")) $("nRecvBtn").onclick = () => {
+  if (!editingCode || !editingStore) return;
+  if (receiveStock(editingStore, editingCode, $("nRecvQty").value)) {
+    sndOk();
+    const it = findItem(editingCode, editingStore);
+    if (it) openItem(it, editingStore);
+    renderStock(); renderHits();
+  }
+};
+if ($("nOpenCrate")) $("nOpenCrate").onclick = () => {
+  if (!editingCode || !editingStore) return;
+  const it = findItem(editingCode, editingStore);
+  const info = crateInfo(it);
+  if (!info) return;
+  if (!confirm("Open 1 "+editingCode+" → +"+info.packSize+" "+info.bottleCode+"?")) return;
+  if (openCrate(editingStore, editingCode)) {
+    sndOk();
+    openItem(findItem(editingCode, editingStore), editingStore);
+    renderStock(); renderHits();
+  }
+};
+if ($("reprintBtn")) $("reprintBtn").onclick = () => {
+  if (!DB.lastRcpt) return;
+  document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x.dataset.p==="sales"));
+  document.querySelectorAll(".page").forEach(x => x.classList.toggle("on", x.id==="sales"));
+  renderSales();
+  openRefund(DB.lastRcpt);
+  sndTap();
+};
 
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
