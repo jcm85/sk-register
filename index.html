@@ -128,28 +128,61 @@ td { padding:10px; border-bottom:1px solid #eee; }
 }
 #whoBar b { font-size:22px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
 #switchBtn { width:auto; flex:0 0 auto; margin:0; padding:8px 14px; min-height:40px; }
-#tutor {
-  display:none; position:fixed; inset:0; z-index:90; overflow:auto;
-  background:rgba(27,77,62,.94); padding:28px 16px 40px;
-}
+#tutor { display:none; }
 #tutor.on { display:block; }
-#tutor .card { max-width:680px; margin:12px auto; }
-#tutor h2 { margin:0 0 8px; font-size:28px; }
-#tutor p { font-size:20px; line-height:1.35; }
-.tutor-actions { display:flex; gap:8px; margin-top:16px; }
-.tutor-actions .btn { width:auto; flex:1; }
+#tutorBlock { position:fixed; inset:0; z-index:90; }
+#tutorShade {
+  position:fixed; inset:0; z-index:91; pointer-events:none;
+  background:rgba(16,30,24,.62);
+}
+#tutorRings { position:fixed; inset:0; z-index:92; pointer-events:none; }
+.tutor-ring {
+  position:fixed; border-radius:14px; pointer-events:none;
+  outline:3px solid var(--amber); box-shadow:0 0 0 5px rgba(201,162,39,.35);
+  animation:tutorPulse 1.4s ease-in-out infinite;
+}
+@keyframes tutorPulse { 50% { outline-color:#fff3b0; } }
+#tutorPick {
+  position:fixed; z-index:95; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(420px, calc(100vw - 32px)); margin:0;
+}
+#tutorBubble {
+  position:fixed; z-index:93; width:min(300px, calc(100vw - 24px));
+  background:#fffdf6; color:var(--ink); border:2px solid var(--amber);
+  border-radius:16px; padding:12px 14px 14px;
+  box-shadow:0 10px 28px rgba(0,0,0,.28);
+}
+#tutorBubble h2 { margin:0 0 4px; font-size:18px; }
+#tutorBubble p { margin:6px 0 0; font-size:16px; line-height:1.35; }
+#tutorBubble .muted { font-size:13px; margin:0; }
+#tutorBubble .tutor-actions { display:flex; gap:8px; margin-top:10px; }
+#tutorBubble .tutor-actions .btn { width:auto; flex:1; min-height:44px; font-size:16px; padding:10px 8px; }
+#tutorBubble #tutorSkip { margin-top:8px; min-height:40px; font-size:15px; }
+#tutorBubble[data-arrow]::before {
+  content:""; position:absolute; border:9px solid transparent;
+}
+#tutorBubble[data-arrow="up"]::before { top:-10px; left:var(--ax, 22px); border-bottom-color:var(--amber); border-top:0; }
+#tutorBubble[data-arrow="down"]::before { bottom:-10px; left:var(--ax, 22px); border-top-color:var(--amber); border-bottom:0; }
+#tutorBubble[data-arrow="left"]::before { left:-10px; top:var(--ay, 18px); border-right-color:var(--amber); border-left:0; }
+#tutorBubble[data-arrow="right"]::before { right:-10px; top:var(--ay, 18px); border-left-color:var(--amber); border-right:0; }
+body.tutor-on { overflow:hidden; }
+body.tutor-cat .cat-list { max-height:120px; }
+#lockBox { max-width:420px; margin:0 auto; }
 </style>
 </head>
 <body>
 <div id="tutor">
+  <div id="tutorBlock"></div>
+  <div id="tutorShade"></div>
+  <div id="tutorRings"></div>
   <div class="card" id="tutorPick">
-    <h2 id="tutorAsk">Choose a language</h2>
+    <h2 id="tutorAsk" style="margin:0 0 8px;font-size:22px">Choose a language</h2>
     <p>Piliin ang wika. Pilien ti pagsasao.</p>
     <button type="button" class="btn btn-g" data-lang="en" style="margin-top:10px">English</button>
     <button type="button" class="btn btn-g" data-lang="tl" style="margin-top:8px">Tagalog</button>
     <button type="button" class="btn btn-g" data-lang="il" style="margin-top:8px">Ilokano</button>
   </div>
-  <div class="card" id="tutorBody" style="display:none">
+  <div id="tutorBubble" style="display:none">
     <p class="muted" id="tutorProg"></p>
     <h2 id="tutorTitle"></h2>
     <p id="tutorText"></p>
@@ -157,16 +190,18 @@ td { padding:10px; border-bottom:1px solid #eee; }
       <button type="button" class="btn btn-ghost" id="tutorBack"></button>
       <button type="button" class="btn btn-a" id="tutorNext"></button>
     </div>
-    <button type="button" class="btn btn-ghost" id="tutorSkip" style="margin-top:8px"></button>
+    <button type="button" class="btn btn-ghost" id="tutorSkip"></button>
   </div>
 </div>
 <div id="lock">
-  <h2 style="margin:8px 0;font-size:22px">Sino ang cashier?</h2>
-  <p style="opacity:.85">Enter 4-digit PIN</p>
-  <div id="lockStaff" class="chips" style="justify-content:center"></div>
-  <input id="lockPin" inputmode="numeric" maxlength="4" placeholder="••••">
-  <button class="btn btn-a" id="lockGo" style="max-width:220px;margin:8px auto">Open register</button>
-  <p id="lockErr" class="warn"></p>
+  <div id="lockBox">
+    <h2 style="margin:8px 0;font-size:22px">Sino ang cashier?</h2>
+    <p style="opacity:.85">Enter 4-digit PIN</p>
+    <div id="lockStaff" class="chips" style="justify-content:center"></div>
+    <input id="lockPin" inputmode="numeric" maxlength="4" placeholder="••••">
+    <button class="btn btn-a" id="lockGo" style="max-width:220px;margin:8px auto">Open register</button>
+    <p id="lockErr" class="warn"></p>
+  </div>
 </div>
 <header>
   <h1 id="storeTitle">S&K Register</h1>
@@ -199,7 +234,7 @@ td { padding:10px; border-bottom:1px solid #eee; }
         <div class="cart-head"><b>Cart</b><b id="cartTotal">₱0.00</b></div>
         <div id="cart"></div>
       </div>
-      <div class="card">
+      <div class="card" id="saleMeta">
         <div class="sale-grid">
           <div class="field">
             <label>Petsa / Date</label>
@@ -1371,74 +1406,208 @@ const TUTOR = {
   en: {
     back:"Back", next:"Next", skip:"Skip", done:"Done",
     steps:[
-      ["Sign in", "Tap your name, enter your 4-digit PIN, then Open register. You stay signed in until you switch cashier."],
-      ["Find an item", "Type a word such as coffee, garlic, or soy sauce. Or tap Groceries, Gas, or Fishing. One sale can mix all three."],
-      ["Set the quantity", "The number is beside the item. Groceries and fishing are pieces. Gas is liters. Tap Add."],
-      ["Watch the cart", "The cart stays on screen. It shows the item, quantity, and line total. The amount in the corner is the whole sale. Tap ✕ to remove a line."],
-      ["Save the sale", "Check the date, receipt number, and payment. If they pay cash, enter the amount received. Tap SAVE SALE. Sukli is the change."],
-      ["Catalog", "Open Catalog to change a price, reorder level, or keywords. Search, tap the item, then Save changes. Add item creates one. Remove item takes it off the list. Past sales stay."]
+      ["Sign in", "Tap your name, enter your PIN, then Open register."],
+      ["Find an item", "Type a word, or tap Groceries, Gas, or Fishing. One sale can mix all three."],
+      ["Set the quantity", "The number is beside the item. Pieces for groceries and fishing. Liters for gas. Then tap Add."],
+      ["Watch the cart", "Item, quantity, and line total stay on screen. The corner amount is the whole sale. Tap ✕ to remove a line."],
+      ["Save the sale", "Check the date, receipt, and payment. For cash, enter what they paid, then tap SAVE SALE. Sukli is the change."],
+      ["Catalog", "Search, tap the item, then change the price, reorder, or keywords. Add item makes a new one. Remove item drops it from the list. Past sales stay."]
     ]
   },
   tl: {
     back:"Bumalik", next:"Susunod", skip:"Laktawan", done:"Tapos na",
     steps:[
-      ["Mag-sign in", "Pindutin ang pangalan, ilagay ang 4-digit na PIN, tapos Open register. Naka-sign in ka hanggang magpalit ng cashier."],
-      ["Hanapin ang item", "Mag-type ng salita gaya ng coffee, garlic, o soy sauce. O pindutin ang Groceries, Gas, o Fishing. Puwedeng paghaluin ang tatlo sa isang benta."],
-      ["Ilagay ang dami", "Nasa tabi ng item ang numero. Ang groceries at fishing ay piraso. Ang gas ay litro. Pindutin ang Add."],
-      ["Tingnan ang cart", "Nakikita ang cart habang nagbebenta. Ipinapakita ang item, dami, at total ng linya. Ang halaga sa sulok ang buong benta. Pindutin ang ✕ para alisin ang linya."],
-      ["I-save ang benta", "Tingnan ang petsa, numero ng resibo, at bayad. Kung cash, ilagay ang perang tinanggap. Pindutin ang SAVE SALE. Ang sukli ay ang change."],
-      ["Catalog", "Buksan ang Catalog para baguhin ang presyo, reorder, o keywords. Maghanap, pindutin ang item, tapos Save changes. Ang Add item ay bagong item. Ang Remove item ay aalisin sa listahan. Nanatili ang mga lumang benta."]
+      ["Mag-sign in", "Pindutin ang pangalan, ilagay ang PIN, tapos Open register."],
+      ["Hanapin ang item", "Mag-type ng salita, o pindutin ang Groceries, Gas, o Fishing. Puwedeng paghaluin sa isang benta."],
+      ["Ilagay ang dami", "Nasa tabi ng item ang numero. Piraso ang groceries at fishing. Litro ang gas. Pindutin ang Add."],
+      ["Tingnan ang cart", "Kita ang item, dami, at total. Ang halaga sa sulok ang buong benta. Pindutin ang ✕ para alisin."],
+      ["I-save ang benta", "Tingnan ang petsa, resibo, at bayad. Kung cash, ilagay ang tinanggap, tapos SAVE SALE. Ang sukli ay ang change."],
+      ["Catalog", "Maghanap, pindutin ang item, tapos baguhin ang presyo, reorder, o keywords. Add item ay bago. Remove item ay aalis sa listahan. Nanatili ang lumang benta."]
     ]
   },
   il: {
     back:"Agsubli", next:"Sumaruno", skip:"Laktawan", done:"Nalpasen",
     steps:[
-      ["Ag-sign in", "Pinduten ti nagan, iserrek ti 4-digit a PIN, kalpasanna Open register. Agtalinaedka a naka-sign in agingga nga agsukat ti cashier."],
-      ["Biroken ti item", "I-type ti sao a kas coffee, garlic, wenno soy sauce. Wenno pinduten ti Groceries, Gas, wenno Fishing. Mabalin a mairaman ti tallo iti maysa a benta."],
-      ["Ikabil ti kaadu", "Adda ti numero iti abay ti item. Groceries ken fishing ket piraso. Ti gas ket litro. Pinduten ti Add."],
-      ["Kitaen ti cart", "Makita ti cart bayat nga aglako. Ipakitana ti item, kaadu, ken total ti linya. Ti presyo iti suli ti sibubukel a benta. Pinduten ti ✕ tapno ikkaten ti linya."],
-      ["I-save ti benta", "Kitaen ti petsa, numero ti resibo, ken bayad. No cash, iserrek ti kuarta a naawat. Pinduten ti SAVE SALE. Ti sukli ket ti sinsukli."],
-      ["Catalog", "Luktan ti Catalog tapno baliwan ti presyo, reorder, wenno keywords. Agbirok, pinduten ti item, kalpasanna Save changes. Ti Add item ket baro nga item. Ti Remove item ket ikkatenna iti listaan. Agtalinaed dagiti napalabas a benta."]
+      ["Ag-sign in", "Pinduten ti nagan, iserrek ti PIN, kalpasanna Open register."],
+      ["Biroken ti item", "I-type ti sao, wenno pinduten ti Groceries, Gas, wenno Fishing. Mabalin a mairaman ti tallo iti maysa a benta."],
+      ["Ikabil ti kaadu", "Adda ti numero iti abay ti item. Piraso ti groceries ken fishing. Litro ti gas. Pinduten ti Add."],
+      ["Kitaen ti cart", "Makita ti item, kaadu, ken total. Ti presyo iti suli ti sibubukel a benta. Pinduten ti ✕ tapno ikkaten."],
+      ["I-save ti benta", "Kitaen ti petsa, resibo, ken bayad. No cash, iserrek ti naawat, kalpasanna SAVE SALE. Ti sukli ket ti sinsukli."],
+      ["Catalog", "Agbirok, pinduten ti item, kalpasanna baliwan ti presyo, reorder, wenno keywords. Add item ket baro. Remove item ket ikkatenna iti listaan. Agtalinaed dagiti napalabas a benta."]
     ]
   }
 };
+const TUTOR_SPOTS = [
+  { page:"reg", lock:true, scroll:"top", sel:["#lockBox"], signedIn:["#whoBar"] },
+  { page:"reg", scroll:"top", sel:["#rSearch", "#catChips"] },
+  { page:"reg", scroll:".hit-row", sel:[".hit-row"] },
+  { page:"reg", scroll:"top", sel:[".cart-card"] },
+  { page:"reg", scroll:"#saveBtn", sel:["#saleMeta", ".pay-card"] },
+  { page:"cat", scroll:"catalog", sel:["nav button[data-p='cat']", "#catSearch", "#catTable tr[data-code]", "#nPrice", "#nReo", "#nKeys", "#addItemBtn"] }
+];
 let tutorStep = 0;
+function showPage(id) {
+  document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x.dataset.p===id));
+  document.querySelectorAll(".page").forEach(x => x.classList.toggle("on", x.id===id));
+}
 function showTutor(on) {
   $("tutor").classList.toggle("on", !!on);
-  if (!on) return;
+  document.body.classList.toggle("tutor-on", !!on);
+  if (!on) {
+    document.body.classList.remove("tutor-cat");
+    $("tutorShade").style.clipPath = "";
+    $("tutorRings").innerHTML = "";
+    if (!DB.session) showLock(true);
+    return;
+  }
   tutorStep = 0;
-  $("tutorPick").style.display = DB.lang ? "none" : "block";
-  $("tutorBody").style.display = DB.lang ? "block" : "none";
-  if (DB.lang) renderTutor();
+  const picking = !DB.lang;
+  $("tutorPick").style.display = picking ? "block" : "none";
+  $("tutorBubble").style.display = picking ? "none" : "block";
+  $("tutorShade").style.clipPath = "";
+  $("tutorRings").innerHTML = "";
+  document.body.classList.remove("tutor-cat");
+  if (!picking) renderTutor();
 }
 function finishTutor() {
   DB.tutorialDone = true;
   save();
+  showPage("reg");
+  window.scrollTo(0, 0);
   showTutor(false);
+}
+function tutorTargets(spot) {
+  const sel = (DB.session && spot.signedIn) ? spot.signedIn : spot.sel;
+  return sel.map(s => document.querySelector(s)).filter(Boolean);
+}
+function drawTutor(els) {
+  const pad = 6;
+  const rects = [];
+  els.forEach(el => {
+    const r = el.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) return;
+    if (r.bottom < 70 || r.top > window.innerHeight - 8) return;
+    const left = Math.max(4, r.left - pad);
+    const top = Math.max(4, r.top - pad);
+    const right = Math.min(window.innerWidth - 4, r.right + pad);
+    const bottom = Math.min(window.innerHeight - 4, r.bottom + pad);
+    if (right - left < 8 || bottom - top < 8) return;
+    rects.push({left, top, right, bottom, width:right-left, height:bottom-top});
+  });
+  const w = window.innerWidth, h = window.innerHeight;
+  let d = "M0 0H"+w+"V"+h+"H0Z";
+  rects.forEach(r => {
+    d += "M"+r.left+" "+r.top+"H"+r.right+"V"+r.bottom+"H"+r.left+"Z";
+  });
+  $("tutorShade").style.clipPath = rects.length ? "path(evenodd,\""+d+"\")" : "";
+  $("tutorRings").innerHTML = "";
+  rects.forEach(r => {
+    const ring = document.createElement("div");
+    ring.className = "tutor-ring";
+    ring.style.left = r.left+"px";
+    ring.style.top = r.top+"px";
+    ring.style.width = r.width+"px";
+    ring.style.height = r.height+"px";
+    $("tutorRings").appendChild(ring);
+  });
+  placeBubble(rects);
+}
+function placeBubble(rects) {
+  const bubble = $("tutorBubble");
+  bubble.style.display = "block";
+  const vw = window.innerWidth, vh = window.innerHeight, m = 10;
+  const bw = bubble.offsetWidth, bh = bubble.offsetHeight;
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const p = rects[0] || {left:vw/2-20, top:vh/2, right:vw/2+20, bottom:vh/2, width:40, height:0};
+  const overlap = (x, y) => rects.reduce((sum, r) => {
+    const ww = Math.max(0, Math.min(x+bw, r.right) - Math.max(x, r.left));
+    const hh = Math.max(0, Math.min(y+bh, r.bottom) - Math.max(y, r.top));
+    return sum + ww*hh;
+  }, 0);
+  const options = [];
+  if (rects.length) {
+    const merged = [];
+    rects.map(r => [r.top, r.bottom]).sort((a,b) => a[0]-b[0]).forEach(([a,b]) => {
+      if (!merged.length || a > merged[merged.length-1][1] + 4) merged.push([a,b]);
+      else merged[merged.length-1][1] = Math.max(merged[merged.length-1][1], b);
+    });
+    const x = clamp(p.left, m, vw-bw-m);
+    merged.forEach(([a], i) => {
+      const gapTop = i===0 ? m : merged[i-1][1] + 12;
+      const gapBot = a - 12;
+      if (gapBot - gapTop < bh) return;
+      options.push({x, y:gapTop, arrow:"up"});
+      options.push({x, y:gapBot-bh, arrow:"down"});
+    });
+    const below = merged[merged.length-1][1] + 12;
+    if (vh - m - below >= bh) options.push({x, y:below, arrow:"up"});
+    const box = rects.reduce((a, r) => ({
+      left:Math.min(a.left, r.left), top:Math.min(a.top, r.top),
+      right:Math.max(a.right, r.right), bottom:Math.max(a.bottom, r.bottom)
+    }), {left:Infinity, top:Infinity, right:-Infinity, bottom:-Infinity});
+    options.push(
+      {x:clamp(p.left, m, vw-bw-m), y:box.bottom+14, arrow:"up"},
+      {x:clamp(p.left, m, vw-bw-m), y:box.top-bh-14, arrow:"down"},
+      {x:box.right+14, y:clamp(p.top, m, vh-bh-m), arrow:"left"},
+      {x:box.left-bw-14, y:clamp(p.top, m, vh-bh-m), arrow:"right"}
+    );
+  }
+  const mid = p.top + p.height/2;
+  const ranked = options
+    .filter(o => o.x>=m && o.y>=m && o.x+bw<=vw-m && o.y+bh<=vh-m)
+    .map(o => ({...o, ov:overlap(o.x, o.y), dist:Math.abs(o.y+bh/2-mid)}))
+    .sort((a,b) => a.ov-b.ov || a.dist-b.dist);
+  const pick = ranked[0] || {x:m, y:Math.max(m, vh-bh-m), arrow:"none"};
+  bubble.style.left = pick.x+"px";
+  bubble.style.top = pick.y+"px";
+  if (pick.arrow==="none") bubble.removeAttribute("data-arrow");
+  else bubble.dataset.arrow = pick.arrow;
+  bubble.style.setProperty("--ax", clamp((p.left+p.width/2)-pick.x-9, 16, bw-28)+"px");
+  bubble.style.setProperty("--ay", clamp((p.top+p.height/2)-pick.y-9, 16, bh-28)+"px");
 }
 function renderTutor() {
   const pack = TUTOR[DB.lang] || TUTOR.en;
   const step = pack.steps[tutorStep];
+  const spot = TUTOR_SPOTS[tutorStep];
+  $("tutorPick").style.display = "none";
+  $("tutorBubble").style.display = "block";
   $("tutorProg").textContent = (tutorStep+1)+" / "+pack.steps.length;
   $("tutorTitle").textContent = step[0];
   $("tutorText").textContent = step[1];
   $("tutorBack").textContent = pack.back;
   $("tutorSkip").textContent = pack.skip;
   $("tutorNext").textContent = tutorStep===pack.steps.length-1 ? pack.done : pack.next;
+  document.body.classList.toggle("tutor-cat", spot.page==="cat");
+  showLock(!!(spot.lock && !DB.session));
+  if (spot.page) showPage(spot.page);
+  const sc = (DB.session && spot.signedIn) ? spot.signedIn[0] : spot.scroll;
+  if (!sc || sc==="top") window.scrollTo(0, 0);
+  else if (sc==="catalog") {
+    const search = document.querySelector("#catSearch");
+    if (search) window.scrollTo(0, Math.max(0, search.getBoundingClientRect().top + window.scrollY - 148));
+  } else {
+    const el = document.querySelector(sc);
+    if (el) el.scrollIntoView({block:"center", inline:"nearest"});
+  }
+  requestAnimationFrame(() => requestAnimationFrame(() => drawTutor(tutorTargets(spot))));
 }
 $("tutor").querySelectorAll("[data-lang]").forEach(b => b.onclick = () => {
   DB.lang = b.dataset.lang;
   save();
   tutorStep = 0;
-  $("tutorPick").style.display = "none";
-  $("tutorBody").style.display = "block";
   renderTutor();
   sndTap();
 });
 $("tutorBack").onclick = () => {
   if (tutorStep===0) {
-    $("tutorBody").style.display = "none";
+    $("tutorBubble").style.display = "none";
     $("tutorPick").style.display = "block";
+    $("tutorShade").style.clipPath = "";
+    $("tutorRings").innerHTML = "";
+    document.body.classList.remove("tutor-cat");
+    showPage("reg");
+    window.scrollTo(0, 0);
+    showLock(!DB.session);
     return;
   }
   tutorStep--;
@@ -1453,6 +1622,10 @@ $("tutorNext").onclick = () => {
 };
 $("tutorSkip").onclick = () => { finishTutor(); sndTap(); };
 $("tutorBtn").onclick = () => { DB.lang = ""; showTutor(true); sndNav(); };
+window.addEventListener("resize", () => {
+  if (!$("tutor").classList.contains("on") || !DB.lang || $("tutorPick").style.display!=="none") return;
+  drawTutor(tutorTargets(TUTOR_SPOTS[tutorStep]));
+});
 
 function renderAll() {
   fillChips(); renderHits(); renderCart(); renderCat(); renderStock(); renderSales(); renderClose(); renderInv(); renderSet();
