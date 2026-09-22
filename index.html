@@ -67,6 +67,9 @@ input.ylw { background:var(--ylw); }
 .hit img, .thumb { width:72px; height:72px; object-fit:cover; border-radius:10px; background:#ddd; flex-shrink:0; }
 .chips { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
 .chips button { border:0; background:var(--g2); color:#fff; padding:12px 16px; border-radius:10px; font-size:16px; font-weight:700; min-height:44px; }
+.barrow { display:grid; grid-template-columns:110px 1fr 90px; gap:8px; align-items:center; margin:8px 0; font-size:16px; }
+.bartrk { background:#e8e4d8; border-radius:8px; height:22px; overflow:hidden; }
+.barfill { background:var(--g2); height:100%; min-width:2px; }
 table { width:100%; border-collapse:collapse; font-size:16px; }
 th { text-align:left; background:var(--g2); color:#fff; padding:10px; font-size:15px; }
 td { padding:10px; border-bottom:1px solid #eee; }
@@ -198,9 +201,14 @@ td { padding:10px; border-bottom:1px solid #eee; }
     <p><b id="cStoreTitle">S&K report</b></p>
     <p class="muted">Each store has its own sales book. Switch store, then download that report only.</p>
     <div class="chips" id="cStoreChips"></div>
-    <label>Close date</label>
-    <input id="cDate" type="date" class="ylw">
+    <div class="chips" id="cRangeChips"></div>
+    <div class="row">
+      <div><label>From</label><input id="cFrom" type="date" class="ylw"></div>
+      <div><label>To</label><input id="cTo" type="date" class="ylw"></div>
+    </div>
+    <input id="cDate" type="hidden">
     <div class="kpi" id="kpis" style="margin-top:10px"></div>
+    <div id="cCharts" style="margin-top:12px"></div>
   </div>
   <div class="card">
     <label>Opening float ₱ (this store)</label><input id="cFloat" class="ylw" type="number" value="2000">
@@ -579,12 +587,18 @@ function renderSales() {
 function storeName(id) {
   return (STORES.find(x=>x.id===id)||{}).name || id;
 }
-function linesFor(id, d) {
-  return (DB.stores[id] && DB.stores[id].sales || []).filter(s=>s.date===d);
+function inRange(date, from, to) {
+  if (!date) return false;
+  if (from && date < from) return false;
+  if (to && date > to) return false;
+  return true;
 }
-function reportText(id, d) {
+function linesFor(id, from, to) {
+  return (DB.stores[id] && DB.stores[id].sales || []).filter(s => inRange(s.date, from, to));
+}
+function reportText(id, from, to) {
   const s = DB.stores[id] || blankStore(storeName(id));
-  const lines = linesFor(id, d);
+  const lines = linesFor(id, from, to);
   const rcpts = [...new Set(lines.map(x=>x.receipt))];
   const tot = lines.reduce((a,x)=>a+Number(x.line),0);
   const cash = lines.filter(x=>x.payment==="Cash").reduce((a,x)=>a+Number(x.line),0);
@@ -597,7 +611,7 @@ function reportText(id, d) {
   const fl = Number((s.settings&&s.settings.float)||0);
   let t = "S&K REGISTER REPORT\n";
   t += "Store: "+storeName(id)+"\n";
-  t += "Date: "+d+"\n";
+  t += "Period: "+from+" to "+to+"\n";
   t += "Generated: "+new Date().toLocaleString()+"\n";
   t += "--------------------------------\n";
   t += "Receipts: "+rcpts.length+"\n";
@@ -623,9 +637,24 @@ function downloadText(name, text) {
   a.download = name;
   a.click();
 }
+function addDays(iso, n) {
+  const x = new Date(iso+"T12:00:00");
+  x.setDate(x.getDate()+n);
+  return x.toLocaleDateString("en-CA");
+}
+function setRange(from, to) {
+  $("cFrom").value = from;
+  $("cTo").value = to;
+  $("cDate").value = to;
+  renderClose();
+}
 function renderClose() {
-  const d = $("cDate").value || today();
-  $("cDate").value = d;
+  const d = today();
+  if (!$("cFrom").value) $("cFrom").value = d;
+  if (!$("cTo").value) $("cTo").value = d;
+  const from = $("cFrom").value;
+  const to = $("cTo").value;
+  $("cDate").value = to;
   const cur = STORES.find(x=>x.id===DB.current);
   $("cStoreTitle").textContent = "S&K report · " + (cur?cur.name:"?");
   $("cStoreChips").innerHTML = STORES.map(s =>
@@ -634,8 +663,17 @@ function renderClose() {
   $("cStoreChips").querySelectorAll("button").forEach(b => b.onclick = () => {
     DB.current = b.dataset.sid; save(); applySession(); renderAll();
   });
+  $("cRangeChips").innerHTML = [
+    ["Today", d, d],
+    ["7 days", addDays(d,-6), d],
+    ["30 days", addDays(d,-29), d],
+    ["This month", d.slice(0,8)+"01", d]
+  ].map(([lab,a,b]) =>
+    `<button type="button" data-a="${a}" data-b="${b}" style="${a===from&&b===to?'outline:3px solid #C9A227':''}">${lab}</button>`
+  ).join("");
+  $("cRangeChips").querySelectorAll("button").forEach(b => b.onclick = () => setRange(b.dataset.a, b.dataset.b));
   if (st().settings.float != null) $("cFloat").value = st().settings.float;
-  const lines = st().sales.filter(s=>s.date===d);
+  const lines = st().sales.filter(s => inRange(s.date, from, to));
   const rcpts = [...new Set(lines.map(s=>s.receipt))];
   const tot = lines.reduce((a,s)=>a+Number(s.line),0);
   const cash = lines.filter(s=>s.payment==="Cash").reduce((a,s)=>a+Number(s.line),0);
@@ -659,29 +697,41 @@ function renderClose() {
   lines.forEach(s => { by[s.code]=by[s.code]||{name:s.name,qty:0,peso:0}; by[s.code].qty+=s.qty; by[s.code].peso+=s.line; });
   $("dayItems").innerHTML = "<tr><th>Code</th><th>Name</th><th>Qty</th><th>Sales</th></tr>" +
     Object.entries(by).map(([k,v])=>`<tr><td>${k}</td><td>${v.name}</td><td>${v.qty}</td><td>${peso(v.peso)}</td></tr>`).join("");
+  const payMax = Math.max(cash, gc, oth, 1);
+  const whoMax = Math.max(1, ...Object.values(byWho));
+  const itemMax = Math.max(1, ...Object.values(by).map(v=>v.peso));
+  const bar = (label, val, max) =>
+    `<div class="barrow"><span>${label}</span><div class="bartrk"><div class="barfill" style="width:${Math.round(100*val/max)}%"></div></div><b>${peso(val)}</b></div>`;
+  $("cCharts").innerHTML =
+    "<p><b>Bayad type</b></p>"+bar("Cash",cash,payMax)+bar("GCash",gc,payMax)+bar("Other",oth,payMax)+
+    "<p style='margin-top:12px'><b>By cashier</b></p>"+(Object.keys(byWho).length?Object.entries(byWho).map(([w,v])=>bar(w,v,whoMax)).join(""):"<p class='muted'>(none)</p>")+
+    "<p style='margin-top:12px'><b>Top items</b></p>"+(Object.keys(by).length?Object.entries(by).sort((a,c)=>c[1].peso-a[1].peso).slice(0,8).map(([,v])=>bar(v.name,v.peso,itemMax)).join(""):"<p class='muted'>(none)</p>");
 }
-$("cDate").onchange = $("cCount").oninput = renderClose;
+$("cFrom").onchange = $("cTo").onchange = $("cCount").oninput = renderClose;
 $("cFloat").oninput = () => {
   st().settings.float = Number($("cFloat").value||0);
   save(); renderClose();
 };
 $("repThis").onclick = () => {
-  const d = $("cDate").value || today();
+  const from = $("cFrom").value || today();
+  const to = $("cTo").value || today();
   const slug = (storeName(DB.current)||"store").replace(/\s+/g,"-");
-  downloadText("S&K-"+slug+"-"+d+".txt", reportText(DB.current, d));
+  downloadText("S&K-"+slug+"-"+from+"-to-"+to+".txt", reportText(DB.current, from, to));
 };
 $("repAll").onclick = () => {
-  const d = $("cDate").value || today();
+  const from = $("cFrom").value || today();
+  const to = $("cTo").value || today();
   STORES.forEach(s => {
     const slug = s.name.replace(/\s+/g,"-");
-    downloadText("S&K-"+slug+"-"+d+".txt", reportText(s.id, d));
+    downloadText("S&K-"+slug+"-"+from+"-to-"+to+".txt", reportText(s.id, from, to));
   });
 };
 $("repPrint").onclick = () => {
-  const d = $("cDate").value || today();
+  const from = $("cFrom").value || today();
+  const to = $("cTo").value || today();
   const w = window.open("", "_blank");
   w.document.write("<pre style='font:18px/1.4 Arial;padding:16px;white-space:pre-wrap'>"+
-    reportText(DB.current,d).replace(/</g,"&lt;")+"</pre>");
+    reportText(DB.current,from,to).replace(/</g,"&lt;")+"</pre>");
   w.document.close(); w.focus(); w.print();
 };
 
