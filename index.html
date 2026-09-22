@@ -55,6 +55,9 @@ input.ylw, select.ylw { background:var(--ylw); }
 .row > * { min-width:0; }
 .row3 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
 .field { min-width:0; }
+.search-row { display:flex; gap:8px; align-items:stretch; }
+.search-row input { flex:1 1 auto; width:auto; min-width:0; }
+.search-row .btn { width:auto; flex:0 0 auto; margin:0; padding:12px 18px; min-height:56px; }
 .field > label { margin:0 0 6px; }
 .reg-layout {
   display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; align-items:start;
@@ -307,7 +310,10 @@ body.tutor-cat .cat-list { max-height:120px; }
     <div class="card">
       <div class="field">
         <label>Type a word — yum, sinigang, toyo, load…</label>
-        <input id="rSearch" class="ylw" placeholder="yum  ·  sinigang  ·  toyo  ·  oil" autocomplete="off">
+        <div class="search-row">
+          <input id="rSearch" class="ylw" placeholder="yum  ·  sinigang  ·  toyo  ·  oil" autocomplete="off" enterkeyhint="search">
+          <button type="button" class="btn btn-g" id="rSearchGo">Search</button>
+        </div>
       </div>
       <div class="chips" id="catChips"></div>
       <p class="muted">Tap a category. Set the quantity beside the item, then tap Add.</p>
@@ -373,7 +379,10 @@ body.tutor-cat .cat-list { max-height:120px; }
     <div class="chips" id="catStoreChips"></div>
     <p class="muted" id="catStoreNote">Tap an item to change price, reorder, or keywords.</p>
     <label>Find item</label>
-    <input id="catSearch" class="ylw" placeholder="garlic  ·  soy sauce  ·  coffee" autocomplete="off">
+    <div class="search-row">
+      <input id="catSearch" class="ylw" placeholder="garlic  ·  soy sauce  ·  coffee" autocomplete="off" enterkeyhint="search">
+      <button type="button" class="btn btn-g" id="catSearchGo">Search</button>
+    </div>
   </div>
   <div class="card cat-list"><table id="catTable"></table></div>
   <div class="card" id="itemForm">
@@ -975,7 +984,18 @@ function renderCart() {
   $("short").textContent = tend && ch<0 ? "KULANG ANG BAYAD" : "";
 }
 
+function finishSearch(input) {
+  input.blur();
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+}
 $("rSearch").addEventListener("input", renderHits);
+$("rSearch").addEventListener("keydown", e => {
+  if (e.key!=="Enter") return;
+  e.preventDefault();
+  renderHits();
+  finishSearch($("rSearch"));
+});
+$("rSearchGo").onclick = () => { renderHits(); finishSearch($("rSearch")); sndTap(); };
 
 $("rTend").oninput = renderCart;
 
@@ -1140,6 +1160,13 @@ function renderCat() {
   });
 }
 $("catSearch").addEventListener("input", renderCat);
+$("catSearch").addEventListener("keydown", e => {
+  if (e.key!=="Enter") return;
+  e.preventDefault();
+  renderCat();
+  finishSearch($("catSearch"));
+});
+$("catSearchGo").onclick = () => { renderCat(); finishSearch($("catSearch")); sndTap(); };
 $("nPhoto").onchange = () => {
   $("nPhotoMsg").textContent = $("nPhoto").files[0] ? "Photo ready — tap Save" : ($("nPhotoMsg").textContent||"");
 };
@@ -1741,10 +1768,10 @@ const GUIDE = [
     en:["Pages", "Register sells. Catalog edits items. Stock, Sales, and Close are the books. Invoice, Staff, and Backup are at the end."],
     tl:["Mga pahina", "Ang Register ang pagbenta. Ang Catalog ang pagbabago ng item. Stock, Sales, at Close ang mga libro. Nasa dulo ang Invoice, Staff, at Backup."],
     il:["Pahina", "Ti Register ti paglakoan. Ti Catalog ti panagbaliw ti item. Stock, Sales, ken Close dagiti libro. Iti pungto ti Invoice, Staff, ken Backup."] },
-  { topic:"reg", page:"reg", scroll:"top", sel:["#rSearch", "#catChips"],
-    en:["Find an item", "Type a word, or tap Groceries, Gas, or Fishing. One sale can mix all three."],
-    tl:["Hanapin ang item", "Mag-type ng salita, o pindutin ang Groceries, Gas, o Fishing. Puwedeng paghaluin sa isang benta."],
-    il:["Biroken ti item", "I-type ti sao, wenno pinduten ti Groceries, Gas, wenno Fishing. Mabalin a mairaman ti tallo iti maysa a benta."] },
+  { topic:"reg", page:"reg", scroll:"top", sel:["#rSearch", "#rSearchGo", "#catChips"],
+    en:["Find an item", "Type a word, then tap Search. The list stays and the keyboard closes. Or tap Groceries, Gas, or Fishing. One sale can mix all three."],
+    tl:["Hanapin ang item", "Mag-type ng salita, tapos pindutin ang Search. Lilitaw ang listahan at magsasara ang keyboard. O pindutin ang Groceries, Gas, o Fishing. Puwedeng paghaluin sa isang benta."],
+    il:["Biroken ti item", "I-type ti sao, kalpasanna pinduten ti Search. Agparang ti listaan ken agserra ti keyboard. Wenno pinduten ti Groceries, Gas, wenno Fishing. Mabalin a mairaman ti tallo iti maysa a benta."] },
   { topic:"reg", page:"reg", scroll:".hit-row", sel:[".hit-row"],
     en:["Quantity", "The number is beside the item. Groceries and fishing are pieces. Tap Add."],
     tl:["Dami", "Nasa tabi ng item ang numero. Piraso ang groceries at fishing. Pindutin ang Add."],
@@ -1761,10 +1788,10 @@ const GUIDE = [
     en:["Save the sale", "Check the date, receipt, and payment. For cash, enter what they paid, then tap SAVE SALE. Sukli is the change."],
     tl:["I-save ang benta", "Tingnan ang petsa, resibo, at bayad. Kung cash, ilagay ang tinanggap, tapos SAVE SALE. Ang sukli ay ang change."],
     il:["I-save ti benta", "Kitaen ti petsa, resibo, ken bayad. No cash, iserrek ti naawat, kalpasanna SAVE SALE. Ti sukli ket ti sinsukli."] },
-  { topic:"cat", page:"cat", scroll:"catalog", sel:["#tabs button[data-p='cat']", "#catSearch", "#catTable tr[data-code]", "#nPrice", "#nReo", "#nKeys", "#addItemBtn"],
-    en:["Catalog", "Search, tap the item, then change the price, reorder, or keywords. Add item makes a new one. Remove item drops it from the list. Past sales stay."],
-    tl:["Catalog", "Maghanap, pindutin ang item, tapos baguhin ang presyo, reorder, o keywords. Add item ay bago. Remove item ay aalis sa listahan. Nanatili ang lumang benta."],
-    il:["Catalog", "Agbirok, pinduten ti item, kalpasanna baliwan ti presyo, reorder, wenno keywords. Add item ket baro. Remove item ket ikkatenna iti listaan. Agtalinaed dagiti napalabas a benta."] },
+  { topic:"cat", page:"cat", scroll:"catalog", sel:["#tabs button[data-p='cat']", "#catSearch", "#catSearchGo", "#catTable tr[data-code]", "#nPrice", "#nReo", "#nKeys", "#addItemBtn"],
+    en:["Catalog", "Type a word and tap Search. The keyboard closes and the list stays. Tap the item, then change the price, reorder, or keywords. Add item makes a new one. Remove item drops it from the list. Past sales stay."],
+    tl:["Catalog", "Mag-type at pindutin ang Search. Magsasara ang keyboard at mananatili ang listahan. Pindutin ang item, tapos baguhin ang presyo, reorder, o keywords. Add item ay bago. Remove item ay aalis sa listahan. Nanatili ang lumang benta."],
+    il:["Catalog", "I-type ken pinduten ti Search. Agserra ti keyboard ken agtalinaed ti listaan. Pinduten ti item, kalpasanna baliwan ti presyo, reorder, wenno keywords. Add item ket baro. Remove item ket ikkatenna iti listaan. Agtalinaed dagiti napalabas a benta."] },
   { topic:"stock", page:"stock", scroll:"#stockBars", sel:["#tabs button[data-p='stock']", "#stockBars"],
     en:["Stock", "The green bar is what is left in this book. A short bar means it is almost out."],
     tl:["Stock", "Ang green bar ang natitira sa librong ito. Maikli ang bar kapag halos ubos na."],
