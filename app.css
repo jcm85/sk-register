@@ -19,7 +19,7 @@
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
-  padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
   font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif;
   background: var(--bg);
   color: var(--ink);
@@ -261,7 +261,8 @@ input.ylw { background: var(--yellow); border-color: #e6d48a; }
   min-width: 96px;
   padding: 8px 14px;
 }
-.mini-bar.empty, .mini-bar.seen { display: none; }
+.mini-bar.empty, .mini-bar.sheet { display: none; }
+#sheetClose { display: none; }
 
 .tabbar {
   position: fixed;
@@ -378,6 +379,31 @@ td { padding: 10px 6px; border-bottom: 1px solid var(--line); vertical-align: to
 .sukli-label { margin: 14px 0 0; color: var(--muted); font-weight: 700; }
 .sukli { margin: 0; font-size: 42px; font-weight: 800; color: var(--green); letter-spacing: -0.03em; }
 
+@media (max-width: 719px) {
+  .pay-panel {
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    bottom: calc(68px + env(safe-area-inset-bottom));
+    z-index: 32;
+    margin: 0;
+    max-height: min(78dvh, 640px);
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -10px 30px rgba(28, 25, 21, 0.22);
+    transform: translateY(120%);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .pay-panel.open {
+    top: 96px;
+    transform: none;
+    max-height: none;
+  }
+  .pay-panel .cart { overflow: auto; flex: 1 1 auto; min-height: 0; }
+  .pay-panel .pay-foot { flex: 0 0 auto; background: var(--card); }
+  #sheetClose { display: block; min-height: 44px; margin-top: 0; padding: 8px 12px; font-size: 16px; }
+}
 @media (max-width: 380px) {
   .find-row { grid-template-columns: 1fr; }
   .bills { grid-template-columns: repeat(3, 1fr); }
@@ -394,9 +420,13 @@ td { padding: 10px 6px; border-bottom: 1px solid var(--line); vertical-align: to
   .pay-panel {
     position: sticky;
     top: 96px;
-    max-height: calc(100dvh - 96px - 84px);
+    max-height: calc(100dvh - 96px - 88px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
-  .cart { overflow: auto; }
+  .pay-panel .cart { overflow: auto; flex: 1 1 auto; min-height: 0; }
+  .pay-panel .pay-foot { flex: 0 0 auto; background: var(--card); }
   .modal { align-items: center; }
 }
 @media (prefers-reduced-motion: reduce) {

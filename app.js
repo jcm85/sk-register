@@ -497,6 +497,7 @@ function saveSale() {
     $("search").value = "";
     activeCat = "All";
     save();
+    setPaySheet(false);
     renderAll();
     openReceipt(receipt);
   } finally {
@@ -951,6 +952,7 @@ function showPage(name) {
     tab.setAttribute("aria-current", on ? "page" : "false");
   });
   $("backupBtn").classList.toggle("on", name === "backup");
+  if (name !== "sell") setPaySheet(false);
   if (name === "sell") renderSell();
   if (name === "catalog") renderCatalog();
   if (name === "journal") renderJournalList();
@@ -1032,9 +1034,10 @@ function bind() {
   });
   $("saveBtn").addEventListener("click", saveSale);
   $("miniJump").addEventListener("click", () => {
-    $("payPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+    setPaySheet(true);
     $("tender").focus();
   });
+  $("sheetClose").addEventListener("click", () => setPaySheet(false));
   $("addItem").addEventListener("click", addItem);
   $("catalogFilter").addEventListener("input", renderCatalog);
   $("catalogList").addEventListener("click", (event) => {
@@ -1125,17 +1128,23 @@ function bind() {
   });
   window.addEventListener("online", paintNet);
   window.addEventListener("offline", paintNet);
-  if ("IntersectionObserver" in window) {
-    const watcher = new IntersectionObserver((entries) => {
-      $("miniBar").classList.toggle("seen", entries.some((entry) => entry.isIntersecting));
-    }, { threshold: 0.35 });
-    watcher.observe($("payPanel"));
-  }
+  window.matchMedia("(max-width: 719px)").addEventListener("change", () => setPaySheet(false));
+}
+
+function setPaySheet(open) {
+  const phone = window.matchMedia("(max-width: 719px)").matches;
+  const show = !!(open && phone);
+  $("payPanel").classList.toggle("open", show);
+  $("miniBar").classList.toggle("sheet", show);
+  $("miniJump").setAttribute("aria-expanded", show ? "true" : "false");
+  if (phone && !show) $("payPanel").setAttribute("inert", "");
+  else $("payPanel").removeAttribute("inert");
 }
 
 db = load();
 bind();
 renderAll();
+setPaySheet(false);
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch(() => {});
 }

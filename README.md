@@ -11,7 +11,7 @@ In Safari: Share → Add to Home Screen. Open the icon once while you have signa
 ## Ring a sale
 
 1. Set **Dami** if they bought more than one, then tap the product. Use + or − on the cart to fix a line.
-2. Tap **Cash**, **GCash**, or **Other**.
+2. Tap **Cash**, **GCash**, or **Other**. On a phone, tap the **Bayad** bar first so the tender sheet opens.
 3. Enter **Bayad** (money received). Tap **Sakto** when the payment is exact. Read **Sukli** before you hand change back.
 4. Tap **SAVE SALE · I-SAVE**. The **Resibo #** is on the receipt and under **Resibo**.
 
