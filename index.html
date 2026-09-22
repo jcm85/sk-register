@@ -210,19 +210,15 @@ td { padding:10px; border-bottom:1px solid #eee; }
 
 <section class="page" id="cat">
   <div class="card">
-    <label>Category</label>
-    <div class="chips" id="catStoreChips"></div>
-    <select id="nCat"><option>Groceries</option><option>Gas station</option><option>Fishing supplies</option></select>
-    <p class="muted" id="catStoreNote">This list follows the category you pick.</p>
-  </div>
-  <div class="card" style="overflow:auto"><table id="catTable"></table></div>
-  <div class="card">
     <p class="muted">Yellow-style fields: edit price and StartStock. Add a row for new items from her photos.</p>
     <div class="row">
       <div><label>Code</label><input id="nCode" class="ylw" placeholder="PEPSI8"></div>
       <div><label>Name</label><input id="nName" class="ylw" placeholder="Pepsi bottle"></div>
     </div>
     <div class="row3">
+      <div><label>Category</label>
+        <select id="nCat"><option>Groceries</option><option>Gas station</option><option>Fishing supplies</option></select>
+      </div>
       <div><label>Unit</label>
         <select id="nUnit"><option>btl</option><option>pack</option><option>crate</option><option>pc</option><option>sachet</option><option>cup</option><option>can</option><option>L</option></select>
       </div>
@@ -240,6 +236,7 @@ td { padding:10px; border-bottom:1px solid #eee; }
     <p class="muted" id="nPhotoMsg"></p>
     <button class="btn btn-g" id="addItemBtn" style="margin-top:8px">Add / update item</button>
   </div>
+  <div class="card" style="overflow:auto"><table id="catTable"></table></div>
 </section>
 
 <section class="page" id="stock">
@@ -798,33 +795,7 @@ function shrinkPhoto(file) {
   });
 }
 
-function setCurrentStore(id) {
-  if (!DB.stores[id] || DB.current===id) return;
-  DB.current = id;
-  if (id==="gas") $("nUnit").value = "L";
-  save();
-  applySession();
-  renderAll();
-}
-function fillStoreChips(host) {
-  if (!host) return;
-  host.innerHTML = STORES.map(s =>
-    `<button type="button" data-sid="${s.id}" style="${s.id===DB.current?'outline:3px solid #C9A227':''}">${s.name}</button>`
-  ).join("");
-  host.querySelectorAll("button").forEach(b => b.onclick = () => setCurrentStore(b.dataset.sid));
-}
-function syncStoreFromCat() {
-  const s = STORES.find(x => x.name === $("nCat").value);
-  if (!s) return;
-  setCurrentStore(s.id);
-}
-$("nCat").addEventListener("change", syncStoreFromCat);
-$("nCat").addEventListener("blur", syncStoreFromCat);
-
 function renderCat() {
-  fillStoreChips($("catStoreChips"));
-  const cur = STORES.find(x => x.id===DB.current);
-  $("catStoreNote").textContent = "Showing " + (cur ? cur.name : "this category") + ".";
   $("catTable").innerHTML = "<tr><th></th><th>Code</th><th>Name</th><th>Presyo</th><th>Start</th></tr>" +
     st().catalog.map((c,i)=>`<tr>
       <td>${c.photo?`<img class="thumb" src="${c.photo}">`:""}</td>
