@@ -215,7 +215,10 @@ td { padding:10px; border-bottom:1px solid #eee; }
     <label>Category</label>
     <div class="chips" id="catStoreChips"></div>
     <p class="muted" id="catStoreNote">Tap an item to change price, reorder, or keywords.</p>
+    <label>Find item</label>
+    <input id="catSearch" class="ylw" placeholder="garlic  ·  soy sauce  ·  coffee" autocomplete="off">
   </div>
+  <div class="card" style="overflow:auto"><table id="catTable"></table></div>
   <div class="card" id="itemForm">
     <p class="muted">Tap an item in the list. Change price, reorder, keywords, or photo, then save.</p>
     <div class="row">
@@ -244,7 +247,6 @@ td { padding:10px; border-bottom:1px solid #eee; }
     <button class="btn btn-g" id="addItemBtn" style="margin-top:8px">Add item</button>
     <button class="btn btn-ghost" id="itemCancel" type="button" style="display:none;margin-top:8px">Cancel</button>
   </div>
-  <div class="card" style="overflow:auto"><table id="catTable"></table></div>
 </section>
 
 <section class="page" id="stock">
@@ -865,6 +867,7 @@ function storeIdByName(name) {
 function setCurrentStore(id) {
   if (!DB.stores[id] || DB.current===id) return;
   DB.current = id;
+  if ($("catSearch")) $("catSearch").value = "";
   if (editingStore && editingStore!==id) clearItemForm();
   else if (!editingCode && id==="gas") $("nUnit").value = "L";
   save();
@@ -918,20 +921,24 @@ function openItem(c, storeId) {
 function renderCat() {
   fillStoreChips($("catStoreChips"));
   const cur = STORES.find(x => x.id===DB.current);
-  $("catStoreNote").textContent = "Showing " + (cur ? cur.name : "this category") + ". Tap an item to change price, reorder, or keywords.";
+  const q = ($("catSearch").value||"").trim().toLowerCase();
+  let rows = st().catalog;
+  if (q) rows = rows.filter(c => haystack(c).includes(q));
+  $("catStoreNote").textContent = "Showing " + (cur ? cur.name : "this category") + (q ? " · "+rows.length+" found" : "") + ". Tap an item to change price, reorder, or keywords.";
   $("catTable").innerHTML = "<tr><th></th><th>Code</th><th>Name</th><th>Presyo</th><th>Reorder</th></tr>" +
-    st().catalog.map(c => `<tr data-code="${esc(c.code)}" class="${editingCode===c.code&&editingStore===DB.current?'pick':''}">
+    (rows.length ? rows.map(c => `<tr data-code="${esc(c.code)}" class="${editingCode===c.code&&editingStore===DB.current?'pick':''}">
       <td>${c.photo?`<img class="thumb" src="${c.photo}">`:""}</td>
       <td>${esc(c.code)}</td>
       <td>${esc(c.name)}<div class="muted">${esc(c.unit||"")}${c.keys?" · "+esc(c.keys):""}</div></td>
       <td>${peso(c.price)}</td>
       <td>${esc(c.reo??0)}</td>
-      </tr>`).join("");
+      </tr>`).join("") : `<tr><td colspan="5" class="muted">Walang tama. Try garlic, soy sauce, coffee, or the item code.</td></tr>`);
   $("catTable").querySelectorAll("tr[data-code]").forEach(tr => tr.onclick = () => {
     const c = st().catalog.find(x => x.code===tr.dataset.code);
     if (c) openItem(c, DB.current);
   });
 }
+$("catSearch").addEventListener("input", renderCat);
 $("nPhoto").onchange = () => {
   $("nPhotoMsg").textContent = $("nPhoto").files[0] ? "Photo ready — tap Save" : ($("nPhotoMsg").textContent||"");
 };
