@@ -32,25 +32,43 @@ nav button {
   border-radius:10px; font-size:16px; font-weight:700; white-space:nowrap; min-height:48px;
 }
 nav button.on { background:var(--g); color:#fff; }
-.page { display:none; padding:16px; max-width:980px; margin:0 auto; }
+.page { display:none; padding:16px; max-width:1120px; margin:0 auto; }
 .page.on { display:block; }
 .card { background:var(--card); border-radius:16px; padding:16px; margin-bottom:14px; box-shadow:0 1px 2px rgba(0,0,0,.06); }
 label { display:block; font-size:15px; color:var(--muted); margin:10px 0 6px; font-weight:700; }
 input, select, textarea {
-  width:100%; max-width:100%; min-width:0; padding:16px; border:2px solid #ccc; border-radius:12px;
+  width:100%; max-width:100%; min-width:0; padding:12px 14px; border:2px solid #d5d0c4; border-radius:12px;
   font-size:22px; background:#fff; min-height:56px; box-sizing:border-box;
 }
-input.ylw { background:var(--ylw); }
-#reg input, #reg select, #reg #whoBar {
-  display:block; width:100%; max-width:100%;
-}
-#reg input[type=date], #reg input[type=time] {
-  display:block; width:100%; max-width:100%;
-  -webkit-appearance:none; appearance:none;
-}
-.row { display:grid; grid-template-columns:1fr 1fr; gap:20px; min-width:0; }
+input.ylw, select.ylw { background:var(--ylw); }
+.row { display:grid; grid-template-columns:1fr 1fr; gap:16px; min-width:0; }
 .row > * { min-width:0; }
-.row3 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.row3 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.field { min-width:0; }
+.field > label { margin:0 0 6px; }
+.reg-layout {
+  display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; align-items:start;
+}
+@media (min-width:901px) {
+  .reg-side { position:sticky; top:128px; }
+}
+.sale-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:14px 16px; align-items:end;
+}
+.span2 { grid-column:1 / -1; }
+.qty-row {
+  display:grid; grid-template-columns:130px minmax(0,1fr); gap:12px; align-items:end; margin-top:4px;
+}
+.qty-row .btn { margin:0; }
+.money {
+  font-size:30px; font-weight:800; line-height:1.1; min-height:56px;
+  display:flex; align-items:center; white-space:nowrap;
+}
+.pay-card { margin-bottom:0; }
+.pay-card .btn-a { margin-top:16px; }
+@media (max-width:900px) {
+  .reg-layout { grid-template-columns:1fr; }
+}
 .btn {
   border:0; border-radius:14px; padding:18px 16px; font-weight:800; font-size:20px; width:100%;
   min-height:56px;
@@ -81,11 +99,7 @@ input.ylw { background:var(--ylw); }
 table { width:100%; border-collapse:collapse; font-size:16px; }
 th { text-align:left; background:var(--g2); color:#fff; padding:10px; font-size:15px; }
 td { padding:10px; border-bottom:1px solid #eee; }
-.sticky-pay {
-  position:relative; background:#fff; padding:16px; border-top:3px solid var(--g);
-}
-#subtotal, #change { font-size:28px; }
-#rCashierName { font-size:20px; }
+#rCashierName { font-size:22px; }
 #lock {
   display:none; position:fixed; inset:0; background:rgba(27,77,62,.94); z-index:80;
   color:#fff; padding:28px 18px; text-align:center;
@@ -94,11 +108,11 @@ td { padding:10px; border-bottom:1px solid #eee; }
 #lock input { font-size:28px; letter-spacing:8px; text-align:center; max-width:220px; margin:12px auto; display:block; }
 #whoBar {
   display:flex; justify-content:space-between; align-items:center; gap:12px;
-  background:var(--ylw); border:2px solid #ccc; border-radius:12px;
-  padding:12px 14px; min-height:56px;
+  background:var(--ylw); border:2px solid #d5d0c4; border-radius:12px;
+  padding:0 8px 0 14px; height:56px; min-height:56px;
 }
-#whoBar b { font-size:22px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#switchBtn { width:auto; flex-shrink:0; padding:10px 16px; border:0; border-radius:8px; min-height:44px; }
+#whoBar b { font-size:22px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+#switchBtn { width:auto; flex:0 0 auto; margin:0; padding:8px 14px; min-height:40px; }
 </style>
 </head>
 <body>
@@ -128,39 +142,70 @@ td { padding:10px; border-bottom:1px solid #eee; }
 </nav>
 
 <section class="page on" id="reg">
-  <div class="card">
-    <label>Type a word — Coke, lucky, marlboro, load…</label>
-    <input id="rSearch" class="ylw" placeholder="coke  ·  lucky  ·  yosi  ·  oil" autocomplete="off">
-    <div class="chips" id="catChips"></div>
-    <div id="hits"></div>
-    <label>Dami / Qty</label>
-    <input id="rQty" class="ylw" type="number" min="1" value="1">
-    <button class="btn btn-g" id="addBtn" style="margin-top:10px">Add item</button>
-    <div id="cart"></div>
-  </div>
-  <div class="card">
-    <label>Petsa / Date</label>
-    <input id="rDate" class="ylw" inputmode="numeric" placeholder="2026-09-22">
-    <label>Resibo #</label>
-    <input id="rRcpt" class="ylw" inputmode="numeric">
-    <label>Cashier</label>
-    <div id="whoBar">
-      <b id="rCashierName">—</b>
-      <button type="button" class="btn-ghost" id="switchBtn">Switch</button>
+  <div class="reg-layout">
+    <div class="card">
+      <div class="field">
+        <label>Type a word — Coke, lucky, marlboro, load…</label>
+        <input id="rSearch" class="ylw" placeholder="coke  ·  lucky  ·  yosi  ·  oil" autocomplete="off">
+      </div>
+      <div class="chips" id="catChips"></div>
+      <div class="qty-row">
+        <div class="field">
+          <label>Dami / Qty</label>
+          <input id="rQty" class="ylw" type="number" min="1" value="1">
+        </div>
+        <button class="btn btn-g" id="addBtn">Add item</button>
+      </div>
+      <div id="hits"></div>
+      <div id="cart"></div>
     </div>
-    <label>Bayad type</label>
-    <select id="rPay" class="ylw"><option>Cash</option><option>GCash</option><option>Other</option></select>
-    <label>Time</label>
-    <input id="rTime" class="ylw" inputmode="numeric" placeholder="05:48">
-  </div>
-  <div class="sticky-pay card">
-    <p class="muted" style="margin:0">Kabuuan</p>
-    <b id="subtotal">₱0.00</b>
-    <label>Bayad / Tendered</label>
-    <input id="rTend" class="ylw" type="number" min="0" step="0.01">
-    <p>Sukli / Change: <b id="change">₱0.00</b> <span id="short" class="warn"></span></p>
-    <button class="btn btn-a" id="saveBtn">SAVE SALE · I-SAVE ANG BENTA</button>
-    <p class="muted" id="saveMsg"></p>
+    <div class="reg-side">
+      <div class="card">
+        <div class="sale-grid">
+          <div class="field">
+            <label>Petsa / Date</label>
+            <input id="rDate" class="ylw" inputmode="numeric" placeholder="2026-09-22">
+          </div>
+          <div class="field">
+            <label>Time</label>
+            <input id="rTime" class="ylw" inputmode="numeric" placeholder="05:48">
+          </div>
+          <div class="field">
+            <label>Resibo #</label>
+            <input id="rRcpt" class="ylw" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label>Bayad type</label>
+            <select id="rPay" class="ylw"><option>Cash</option><option>GCash</option><option>Other</option></select>
+          </div>
+          <div class="field span2">
+            <label>Cashier</label>
+            <div id="whoBar">
+              <b id="rCashierName">—</b>
+              <button type="button" class="btn-ghost" id="switchBtn">Switch</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card pay-card">
+        <div class="sale-grid">
+          <div class="field">
+            <label>Kabuuan</label>
+            <div class="money" id="subtotal">₱0.00</div>
+          </div>
+          <div class="field">
+            <label>Bayad / Tendered</label>
+            <input id="rTend" class="ylw" type="number" min="0" step="0.01">
+          </div>
+          <div class="field span2">
+            <label>Sukli / Change <span id="short" class="warn"></span></label>
+            <div class="money" id="change">₱0.00</div>
+          </div>
+        </div>
+        <button class="btn btn-a" id="saveBtn">SAVE SALE · I-SAVE ANG BENTA</button>
+        <p class="muted" id="saveMsg"></p>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -495,7 +540,7 @@ function renderCart() {
   $("subtotal").textContent = peso(sub);
   const tend = Number($("rTend").value||0);
   const ch = tend ? tend-sub : 0;
-  $("change").textContent = tend?peso(ch):"—";
+  $("change").textContent = peso(tend ? ch : 0);
   $("short").textContent = tend && ch<0 ? "KULANG ANG BAYAD" : "";
 }
 
