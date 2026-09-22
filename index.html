@@ -35,12 +35,16 @@ nav button.on { background:var(--g); color:#fff; }
 .page { display:none; padding:16px; max-width:980px; margin:0 auto; }
 .page.on { display:block; }
 .card { background:var(--card); border-radius:16px; padding:16px; margin-bottom:14px; box-shadow:0 1px 2px rgba(0,0,0,.06); }
-label { display:block; font-size:15px; color:var(--muted); margin:10px 0 6px; font-weight:700; }
+label { display:block; font-size:14px; color:var(--muted); margin:12px 0 6px; font-weight:700; }
+.field { min-width:0; }
+.field > label { margin-top:0; }
+.row > div > label, .row3 > div > label { margin-top:0; }
+.field + .field, .row + .row, .row + .field, .field + .row { margin-top:12px; }
 input, select, textarea {
-  width:100%; max-width:100%; min-width:0; padding:16px; border:2px solid #ccc; border-radius:12px;
-  font-size:22px; background:#fff; min-height:56px; box-sizing:border-box;
+  width:100%; max-width:100%; min-width:0; padding:12px 14px; border:2px solid #ccc; border-radius:12px;
+  font-size:20px; background:#fff; min-height:52px; box-sizing:border-box;
 }
-input.ylw { background:var(--ylw); }
+input.ylw, select.ylw { background:var(--ylw); }
 #reg input, #reg select, #reg #whoBar {
   display:block; width:100%; max-width:100%;
 }
@@ -48,9 +52,13 @@ input.ylw { background:var(--ylw); }
   display:block; width:100%; max-width:100%;
   -webkit-appearance:none; appearance:none;
 }
-.row { display:grid; grid-template-columns:1fr 1fr; gap:20px; min-width:0; }
+.row { display:grid; grid-template-columns:1fr 1fr; gap:12px; min-width:0; align-items:start; }
 .row > * { min-width:0; }
-.row3 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; min-width:0; }
+.row3 > * { min-width:0; }
+@media (max-width:640px) {
+  .row, .row3 { grid-template-columns:1fr; }
+}
 .btn {
   border:0; border-radius:14px; padding:18px 16px; font-weight:800; font-size:20px; width:100%;
   min-height:56px;
@@ -84,21 +92,31 @@ td { padding:10px; border-bottom:1px solid #eee; }
 .sticky-pay {
   position:relative; background:#fff; padding:16px; border-top:3px solid var(--g);
 }
-#subtotal, #change { font-size:28px; }
-#rCashierName { font-size:20px; }
+.total-box {
+  display:flex; flex-direction:column; justify-content:center;
+  background:var(--cream); border:2px solid #ddd; border-radius:12px;
+  padding:10px 14px; min-height:52px;
+}
+.total-box .muted { margin:0 0 2px; font-size:14px; font-weight:700; }
+#subtotal, #change { display:block; font-size:26px; line-height:1.15; font-weight:800; }
+.change-row {
+  display:flex; align-items:baseline; flex-wrap:wrap; gap:8px 12px;
+  margin:12px 0 14px; padding:10px 14px; background:var(--cream); border-radius:12px;
+}
+.change-row .muted { margin:0; font-weight:700; }
+#whoBar {
+  display:flex; justify-content:space-between; align-items:center; gap:10px;
+  background:var(--ylw); border:2px solid #ccc; border-radius:12px;
+  padding:8px 10px 8px 14px; min-height:52px; box-sizing:border-box;
+}
+#whoBar b { font-size:20px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+#switchBtn { width:auto; flex-shrink:0; padding:8px 14px; border:0; border-radius:8px; min-height:36px; font-size:15px; }
 #lock {
   display:none; position:fixed; inset:0; background:rgba(27,77,62,.94); z-index:80;
   color:#fff; padding:28px 18px; text-align:center;
 }
 #lock.on { display:block; }
 #lock input { font-size:28px; letter-spacing:8px; text-align:center; max-width:220px; margin:12px auto; display:block; }
-#whoBar {
-  display:flex; justify-content:space-between; align-items:center; gap:12px;
-  background:var(--ylw); border:2px solid #ccc; border-radius:12px;
-  padding:12px 14px; min-height:56px;
-}
-#whoBar b { font-size:22px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#switchBtn { width:auto; flex-shrink:0; padding:10px 16px; border:0; border-radius:8px; min-height:44px; }
 </style>
 </head>
 <body>
@@ -129,36 +147,68 @@ td { padding:10px; border-bottom:1px solid #eee; }
 
 <section class="page on" id="reg">
   <div class="card">
-    <label>Type a word — Coke, lucky, marlboro, load…</label>
-    <input id="rSearch" class="ylw" placeholder="coke  ·  lucky  ·  yosi  ·  oil" autocomplete="off">
+    <div class="field">
+      <label>Type a word — Coke, lucky, marlboro, load…</label>
+      <input id="rSearch" class="ylw" placeholder="coke  ·  lucky  ·  yosi  ·  oil" autocomplete="off">
+    </div>
     <div class="chips" id="catChips"></div>
     <div id="hits"></div>
-    <label>Dami / Qty</label>
-    <input id="rQty" class="ylw" type="number" min="1" value="1">
-    <button class="btn btn-g" id="addBtn" style="margin-top:10px">Add item</button>
+    <div class="row" style="margin-top:8px">
+      <div class="field">
+        <label>Dami / Qty</label>
+        <input id="rQty" class="ylw" type="number" min="1" value="1">
+      </div>
+      <div class="field" style="display:flex;align-items:end">
+        <button class="btn btn-g" id="addBtn">Add item</button>
+      </div>
+    </div>
     <div id="cart"></div>
   </div>
   <div class="card">
-    <label>Petsa / Date</label>
-    <input id="rDate" class="ylw" inputmode="numeric" placeholder="2026-09-22">
-    <label>Resibo #</label>
-    <input id="rRcpt" class="ylw" inputmode="numeric">
-    <label>Cashier</label>
-    <div id="whoBar">
-      <b id="rCashierName">—</b>
-      <button type="button" class="btn-ghost" id="switchBtn">Switch</button>
+    <div class="row">
+      <div class="field">
+        <label>Petsa / Date</label>
+        <input id="rDate" class="ylw" inputmode="numeric" placeholder="2026-09-22">
+      </div>
+      <div class="field">
+        <label>Resibo #</label>
+        <input id="rRcpt" class="ylw" inputmode="numeric">
+      </div>
     </div>
-    <label>Bayad type</label>
-    <select id="rPay" class="ylw"><option>Cash</option><option>GCash</option><option>Other</option></select>
-    <label>Time</label>
-    <input id="rTime" class="ylw" inputmode="numeric" placeholder="05:48">
+    <div class="row">
+      <div class="field">
+        <label>Cashier</label>
+        <div id="whoBar">
+          <b id="rCashierName">—</b>
+          <button type="button" class="btn-ghost" id="switchBtn">Switch</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Time</label>
+        <input id="rTime" class="ylw" inputmode="numeric" placeholder="05:48">
+      </div>
+    </div>
+    <div class="field">
+      <label>Bayad type</label>
+      <select id="rPay" class="ylw"><option>Cash</option><option>GCash</option><option>Other</option></select>
+    </div>
   </div>
   <div class="sticky-pay card">
-    <p class="muted" style="margin:0">Kabuuan</p>
-    <b id="subtotal">₱0.00</b>
-    <label>Bayad / Tendered</label>
-    <input id="rTend" class="ylw" type="number" min="0" step="0.01">
-    <p>Sukli / Change: <b id="change">₱0.00</b> <span id="short" class="warn"></span></p>
+    <div class="row">
+      <div class="field">
+        <label>Kabuuan</label>
+        <div class="total-box"><b id="subtotal">₱0.00</b></div>
+      </div>
+      <div class="field">
+        <label>Bayad / Tendered</label>
+        <input id="rTend" class="ylw" type="number" min="0" step="0.01">
+      </div>
+    </div>
+    <div class="change-row">
+      <span class="muted">Sukli / Change</span>
+      <b id="change">₱0.00</b>
+      <span id="short" class="warn"></span>
+    </div>
     <button class="btn btn-a" id="saveBtn">SAVE SALE · I-SAVE ANG BENTA</button>
     <p class="muted" id="saveMsg"></p>
   </div>
