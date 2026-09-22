@@ -276,6 +276,8 @@ td { padding:10px; border-bottom:1px solid #eee; }
   <div class="card">
     <label>Store name</label><input id="sName" class="ylw">
     <button class="btn btn-g" id="sSave" style="margin-top:8px">Save store name</button>
+    <label style="margin-top:14px"><input id="sSound" type="checkbox" checked style="width:auto;min-height:28px;margin-right:8px"> Sound / tunog</label>
+    <p class="muted">Beeps on tap, add to cart, save sale, and errors. Uncheck if the counter is loud enough.</p>
   </div>
   <div class="card">
     <p><b>Backup to JC (Katy PC)</b></p>
@@ -320,6 +322,28 @@ const SEED = [
 ];
 
 const $ = id => document.getElementById(id);
+let audioCtx = null;
+function beep(freq, ms, type, vol) {
+  if (DB && DB.sound===false) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+    if (audioCtx.state==="suspended") audioCtx.resume();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type || "square";
+    o.frequency.value = freq;
+    g.gain.value = vol || 0.06;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start();
+    setTimeout(() => { o.stop(); }, ms||80);
+  } catch(e) {}
+  try { if (navigator.vibrate) navigator.vibrate(ms>120?30:12); } catch(e) {}
+}
+function sndTap() { beep(520, 50, "square", 0.05); }
+function sndAdd() { beep(660, 70, "square", 0.06); setTimeout(()=>beep(880,70,"square",0.05),70); }
+function sndOk() { beep(523,80); setTimeout(()=>beep(659,80),90); setTimeout(()=>beep(784,120),180); }
+function sndErr() { beep(180, 180, "sawtooth", 0.07); }
+function sndNav() { beep(400, 40, "triangle", 0.04); }
 const peso = n => "₱" + (Number(n)||0).toLocaleString("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2});
 const today = () => new Date().toLocaleDateString("en-CA");
 const nowT = () => new Date().toTimeString().slice(0,5);
@@ -370,6 +394,7 @@ function load() {
   }
   if (!d.mgrPin) d.mgrPin = (d.settings && d.settings.mgrPin) || "2580";
   if (!d.current) d.current = "groc";
+  if (d.sound===undefined) d.sound = true;
   d.session = d.session || null;
   return d;
 }
@@ -440,6 +465,7 @@ function renderHits() {
   ).join("");
   $("hits").querySelectorAll(".hit").forEach(b => b.onclick = () => {
     picked = st().catalog.find(c => c.code===b.dataset.code);
+    sndTap();
     renderHits();
   });
 }
@@ -476,13 +502,14 @@ $("rSearch").addEventListener("input", renderHits);
 $("addBtn").onclick = () => {
   const it = picked || searchItems($("rSearch").value)[0];
   const qty = Number($("rQty").value||0);
-  if (!it || qty<=0) { alert("Code not found / walang code. Add it on Catalog first."); return; }
+  if (!it || qty<=0) { sndErr(); alert("Code not found / walang code. Add it on Catalog first."); return; }
   if (it.cat!=="Load" && it.cat!=="Empties" && onHand(it)<qty)
     if (!confirm(it.code+" on hand "+onHand(it)+". Sell anyway?")) return;
   const exist = st().cart.find(l => l.code===it.code);
   if (exist) exist.qty += qty;
   else st().cart.push({code:it.code,name:it.name,cat:it.cat,price:Number(it.price),qty});
   $("rSearch").value=""; $("rQty").value=1; save(); renderCart();
+  sndAdd();
 };
 
 $("rTend").oninput = renderCart;
@@ -492,19 +519,20 @@ $("lockGo").onclick = () => {
   const name = $("lock").dataset.who;
   const pin = ($("lockPin").value||"").trim();
   const who = (DB.staff||[]).find(s => s.name===name && s.pin===pin);
-  if (!who) { $("lockErr").textContent = "Mali ang PIN / wrong PIN"; return; }
+  if (!who) { sndErr(); $("lockErr").textContent = "Mali ang PIN / wrong PIN"; return; }
   DB.session = who.name;
   save(); applySession(); showLock(false); renderAll();
+  sndOk();
 };
 $("lockPin").addEventListener("keydown", e => { if (e.key==="Enter") $("lockGo").click(); });
 
 $("saveBtn").onclick = () => {
-  if (!DB.session) { showLock(true); alert("Enter staff PIN first."); return; }
-  if (!st().cart.length) { alert("Cart empty."); return; }
+  if (!DB.session) { sndErr(); showLock(true); alert("Enter staff PIN first."); return; }
+  if (!st().cart.length) { sndErr(); alert("Cart empty."); return; }
   const sub = st().cart.reduce((a,l)=>a+l.price*l.qty,0);
   const tend = Number($("rTend").value||0);
   const pay = $("rPay").value;
-  if (pay==="Cash" && tend && tend<sub) { alert("Kulanga ang bayad."); return; }
+  if (pay==="Cash" && tend && tend<sub) { sndErr(); alert("Kulanga ang bayad."); return; }
   const rcpt = Number($("rRcpt").value||st().settings.nextRcpt);
   const rec = {
     receipt: rcpt, date:$("rDate").value, time:$("rTime").value,
@@ -523,6 +551,7 @@ $("saveBtn").onclick = () => {
   save();
   renderCart(); renderAll();
   $("saveMsg").textContent = "Saved resibo #"+rcpt+". Stock updated.";
+  sndOk();
 };
 
 function shrinkPhoto(file) {
@@ -825,9 +854,11 @@ function renderSet() {
     const name = s ? s.name : "Groceries";
     $("nCat").value = name;
   }
+  if ($("sSound")) $("sSound").checked = DB.sound!==false;
 }
+$("sSound").onchange = () => { DB.sound = $("sSound").checked; save(); if (DB.sound) sndOk(); };
 $("sSave").onclick = () => {
-  save(); applySession();
+  save(); applySession(); sndTap();
 };
 $("eAdd").onclick = () => {
   const name = ($("eName").value||"").trim();
@@ -890,7 +921,7 @@ function renderAll() {
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
   document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
   document.querySelectorAll(".page").forEach(x=>x.classList.remove("on"));
-  b.classList.add("on"); $(b.dataset.p).classList.add("on");
+  b.classList.add("on"); $(b.dataset.p).classList.add("on"); sndNav();
   if (b.dataset.p==="stock") renderStock();
   if (b.dataset.p==="sales") renderSales();
   if (b.dataset.p==="close") renderClose();
