@@ -113,12 +113,13 @@ input.ylw, select.ylw { background:var(--ylw); }
   }
   #cart { flex:1 1 auto; min-height:0; overflow:auto; }
 }
-/* iPhone portrait: compact cart, tender+SAVE pinned to safe bottom, lean top nav */
+/* iPhone portrait: compact cart glued above fixed tender+SAVE; lean top nav */
 @media (max-width:600px) {
   body { padding-bottom:0; font-size:16px; }
   .page { padding:12px; max-width:100%; }
   #reg {
-    padding-bottom:calc(210px + env(safe-area-inset-bottom, 0px));
+    /* room for fixed cart (~112) + pay bar (--sk-pay-h, fallback ~220) */
+    padding-bottom:calc(112px + var(--sk-pay-h, 220px) + 8px);
   }
   #tabs button[data-p="cat"],
   #tabs button[data-p="inv"],
@@ -131,13 +132,26 @@ input.ylw, select.ylw { background:var(--ylw); }
   header p { display:none; }
   #menuBtn { flex:0 0 44px; width:44px; height:44px; }
   .reg-side { gap:8px; }
-  .cart-card { max-height:160px; min-height:88px; padding:10px; }
+  .cart-card {
+    position:fixed; left:0; right:0; z-index:19;
+    bottom:var(--sk-pay-h, 220px);
+    max-height:112px; min-height:72px; height:auto;
+    margin:0; padding:8px 12px;
+    border-radius:16px 16px 0 0;
+    box-shadow:0 -4px 20px rgba(0,0,0,.12);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .cart-card .cart-head { flex:0 0 auto; margin-bottom:4px; }
+  .cart-card .cart-head b { font-size:16px; }
+  .cart-card #cart { flex:1 1 auto; min-height:0; overflow:auto; }
+  .cart-card #cart .line { padding:4px 0; font-size:14px; }
+  .cart-card #cart .muted { margin:0; font-size:13px; }
   #saleMeta { padding:10px; }
   .sale-grid { gap:8px 10px; }
   .pay-card {
     position:fixed; left:0; right:0; bottom:0; z-index:18;
-    margin:0; border-radius:16px 16px 0 0;
-    box-shadow:0 -6px 24px rgba(0,0,0,.14);
+    margin:0; border-radius:0;
+    box-shadow:none;
     padding:10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
   }
   .pay-card .btn-a { margin-top:8px; min-height:52px; font-size:18px; }
@@ -1117,6 +1131,15 @@ function fillChips() {
   });
 }
 
+function syncPhonePayHeight() {
+  const pay = document.querySelector(".pay-card");
+  if (!pay) return;
+  if (window.matchMedia("(max-width:600px)").matches) {
+    document.documentElement.style.setProperty("--sk-pay-h", pay.offsetHeight + "px");
+  } else {
+    document.documentElement.style.removeProperty("--sk-pay-h");
+  }
+}
 function renderCart() {
   const el = $("cart");
   if (!DB.cart.length) { el.innerHTML = '<p class="muted">Cart empty. Magdagdag ng item.</p>'; }
@@ -1137,6 +1160,7 @@ function renderCart() {
   const ch = tend ? tend-sub : 0;
   $("change").textContent = peso(tend ? ch : 0);
   $("short").textContent = tend && ch<0 ? "KULANG ANG BAYAD" : "";
+  syncPhonePayHeight();
 }
 
 function finishSearch(input) {
@@ -2315,6 +2339,7 @@ document.querySelectorAll("#drawer [data-page]").forEach(b => b.onclick = () => 
 $("tutorNewsGo").onclick = () => startTutor();
 $("tutorNewsLater").onclick = () => { ackTutor(); sndTap(); };
 window.addEventListener("resize", () => {
+  syncPhonePayHeight();
   if (!$("tutor").classList.contains("on") || $("tutorBubble").style.display==="none") return;
   const spot = topicSteps()[tutorStep];
   if (spot) drawTutor(tutorTargets(spot));
