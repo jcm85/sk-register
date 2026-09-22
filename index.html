@@ -18,11 +18,21 @@
 html,body { margin:0; font-family:Arial,system-ui,sans-serif; background:var(--bg); color:var(--ink); }
 body { padding-bottom:24px; font-size:18px; }
 header {
-  background:var(--g); color:#fff; padding:16px 18px 14px;
+  background:var(--g); color:#fff; padding:10px 12px;
   position:sticky; top:0; z-index:20;
+  display:flex; align-items:center; gap:10px;
 }
+.header-text { min-width:0; flex:1; }
 header h1 { margin:0; font-size:22px; font-weight:700; }
 header p { margin:4px 0 0; font-size:14px; opacity:.85; }
+#menuBtn {
+  position:relative; flex:0 0 48px; width:48px; height:48px; border:0; border-radius:12px;
+  background:rgba(255,255,255,.16); color:#fff; font-size:26px; line-height:1;
+}
+#menuBtn.fresh::after, .side-btn.fresh::after {
+  content:""; position:absolute; top:6px; right:8px; width:10px; height:10px;
+  background:var(--amber); border-radius:50%;
+}
 nav {
   display:flex; gap:8px; overflow-x:auto; padding:10px 12px;
   background:#fff; border-bottom:1px solid #ddd; position:sticky; top:70px; z-index:19;
@@ -168,6 +178,40 @@ td { padding:10px; border-bottom:1px solid #eee; }
 body.tutor-on { overflow:hidden; }
 body.tutor-cat .cat-list { max-height:120px; }
 #lockBox { max-width:420px; margin:0 auto; }
+#drawerScrim { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:85; }
+#drawerScrim.on { display:block; }
+#drawer {
+  position:fixed; top:0; left:0; bottom:0; width:min(380px, 90vw); z-index:86;
+  background:#fffdf8; color:var(--ink); display:flex; flex-direction:column;
+  transform:translateX(-105%); transition:transform .2s ease;
+  box-shadow:8px 0 28px rgba(0,0,0,.2);
+}
+#drawer.on { transform:none; }
+.drawer-head {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  background:var(--g); color:#fff; padding:14px 12px 14px 16px;
+}
+.drawer-head b { font-size:22px; }
+#drawerClose { width:44px; height:44px; border:0; border-radius:10px; background:rgba(255,255,255,.16); color:#fff; font-size:22px; }
+.drawer-nav { display:flex; flex-direction:column; gap:8px; padding:12px 12px 0; }
+.side-btn {
+  position:relative; width:100%; text-align:left; border:0; border-radius:12px;
+  background:var(--cream); color:var(--ink); font-weight:800; font-size:18px;
+  min-height:48px; padding:12px 14px;
+}
+.side-btn.on { background:var(--g); color:#fff; }
+#helpBody { overflow:auto; padding:12px 14px 28px; -webkit-overflow-scrolling:touch; }
+#helpBody p { font-size:17px; line-height:1.4; margin:0 0 10px; }
+.faq { background:var(--cream); border-radius:12px; padding:10px 12px; margin:0 0 8px; }
+.faq summary { font-weight:800; font-size:17px; }
+.faq p { margin:8px 0 0; }
+#tutorNews {
+  display:none; position:fixed; left:12px; right:12px; bottom:12px; z-index:78;
+  max-width:480px; margin:0 auto; border:2px solid var(--amber);
+}
+#tutorNews.on { display:block; }
+#tutorNews .tutor-actions { display:flex; gap:8px; margin-top:10px; }
+#tutorNews .tutor-actions .btn { width:auto; flex:1; min-height:48px; font-size:16px; padding:10px; }
 </style>
 </head>
 <body>
@@ -201,13 +245,40 @@ body.tutor-cat .cat-list { max-height:120px; }
     <input id="lockPin" inputmode="numeric" maxlength="4" placeholder="••••">
     <button class="btn btn-a" id="lockGo" style="max-width:220px;margin:8px auto">Open register</button>
     <p id="lockErr" class="warn"></p>
+    <button type="button" id="lockHelp" class="btn btn-ghost" style="max-width:220px;margin:14px auto;background:transparent;color:#fff">Help</button>
+  </div>
+</div>
+<div id="drawerScrim"></div>
+<aside id="drawer" aria-label="Help menu">
+  <div class="drawer-head">
+    <b id="drawerTitle">Help</b>
+    <button type="button" id="drawerClose" aria-label="Close">✕</button>
+  </div>
+  <div class="drawer-nav">
+    <button type="button" class="side-btn" data-help="help">Help</button>
+    <button type="button" class="side-btn" data-help="faq">FAQ</button>
+    <button type="button" class="side-btn" data-help="tutor">Tutorial</button>
+    <button type="button" class="side-btn" data-help="lang">Language</button>
+    <button type="button" class="side-btn" data-help="news">What's new</button>
+  </div>
+  <div id="helpBody"></div>
+</aside>
+<div id="tutorNews" class="card">
+  <b id="tutorNewsTitle">Tutorial updated</b>
+  <p id="tutorNewsText" style="margin:6px 0 0"></p>
+  <div class="tutor-actions">
+    <button type="button" class="btn btn-ghost" id="tutorNewsLater">Later</button>
+    <button type="button" class="btn btn-a" id="tutorNewsGo">Open tutorial</button>
   </div>
 </div>
 <header>
-  <h1 id="storeTitle">S&K Register</h1>
-  <p id="storeSub">Pick a store at login · three separate books</p>
+  <button type="button" id="menuBtn" aria-label="Menu">☰</button>
+  <div class="header-text">
+    <h1 id="storeTitle">S&K Register</h1>
+    <p id="storeSub">Pick a store at login · three separate books</p>
+  </div>
 </header>
-<nav>
+<nav id="tabs">
   <button class="on" data-p="reg">Register</button>
   <button data-p="cat">Catalog</button>
   <button data-p="stock">Stock</button>
@@ -418,8 +489,7 @@ body.tutor-cat .cat-list { max-height:120px; }
     <input id="impFile" type="file" accept="application/json">
   </div>
   <div class="card">
-    <p class="muted">Install: iPhone/iPad Share → Add to Home Screen. Android menu → Install app. Works offline after first open.</p>
-    <button class="btn btn-g" id="tutorBtn" type="button" style="margin-top:8px">Show tutorial</button>
+    <p class="muted">Install: iPhone/iPad Share → Add to Home Screen. Android menu → Install app. Works offline after first open. Help, FAQ, and the tutorial are in the menu.</p>
     <button class="btn btn-r" id="wipeBtn">Erase demo sales only</button>
   </div>
 </section>
@@ -647,8 +717,10 @@ function seedFor(name) {
 function blankStore(name) {
   return { settings:{ name, nextRcpt:1001, float:2000 }, catalog: seedFor(name), sales:[], invoices:[], cart:[] };
 }
+let tutorIsNew = false;
 function load() {
   const raw = localStorage.getItem("kaiah");
+  tutorIsNew = !raw;
   const d = raw ? JSON.parse(raw) : {};
   if (!d.stores) {
     const CAT_MAP = {
@@ -748,6 +820,7 @@ function findItem(code, store) {
 }
 function showLock(on) {
   $("lock").classList.toggle("on", !!on);
+  if (!on) maybeTutorNews();
   if (on) {
     $("lockPin").value = "";
     $("lockErr").textContent = "";
@@ -1402,52 +1475,188 @@ $("wipeBtn").onclick = () => {
   st().sales=[]; st().invoices=[]; st().settings.nextRcpt=1001; save(); renderAll();
 };
 
-const TUTOR = {
-  en: {
-    back:"Back", next:"Next", skip:"Skip", done:"Done",
-    steps:[
-      ["Sign in", "Tap your name, enter your PIN, then Open register."],
-      ["Find an item", "Type a word, or tap Groceries, Gas, or Fishing. One sale can mix all three."],
-      ["Set the quantity", "The number is beside the item. Pieces for groceries and fishing. Liters for gas. Then tap Add."],
-      ["Watch the cart", "Item, quantity, and line total stay on screen. The corner amount is the whole sale. Tap ✕ to remove a line."],
-      ["Save the sale", "Check the date, receipt, and payment. For cash, enter what they paid, then tap SAVE SALE. Sukli is the change."],
-      ["Catalog", "Search, tap the item, then change the price, reorder, or keywords. Add item makes a new one. Remove item drops it from the list. Past sales stay."]
-    ]
-  },
-  tl: {
-    back:"Bumalik", next:"Susunod", skip:"Laktawan", done:"Tapos na",
-    steps:[
-      ["Mag-sign in", "Pindutin ang pangalan, ilagay ang PIN, tapos Open register."],
-      ["Hanapin ang item", "Mag-type ng salita, o pindutin ang Groceries, Gas, o Fishing. Puwedeng paghaluin sa isang benta."],
-      ["Ilagay ang dami", "Nasa tabi ng item ang numero. Piraso ang groceries at fishing. Litro ang gas. Pindutin ang Add."],
-      ["Tingnan ang cart", "Kita ang item, dami, at total. Ang halaga sa sulok ang buong benta. Pindutin ang ✕ para alisin."],
-      ["I-save ang benta", "Tingnan ang petsa, resibo, at bayad. Kung cash, ilagay ang tinanggap, tapos SAVE SALE. Ang sukli ay ang change."],
-      ["Catalog", "Maghanap, pindutin ang item, tapos baguhin ang presyo, reorder, o keywords. Add item ay bago. Remove item ay aalis sa listahan. Nanatili ang lumang benta."]
-    ]
-  },
-  il: {
-    back:"Agsubli", next:"Sumaruno", skip:"Laktawan", done:"Nalpasen",
-    steps:[
-      ["Ag-sign in", "Pinduten ti nagan, iserrek ti PIN, kalpasanna Open register."],
-      ["Biroken ti item", "I-type ti sao, wenno pinduten ti Groceries, Gas, wenno Fishing. Mabalin a mairaman ti tallo iti maysa a benta."],
-      ["Ikabil ti kaadu", "Adda ti numero iti abay ti item. Piraso ti groceries ken fishing. Litro ti gas. Pinduten ti Add."],
-      ["Kitaen ti cart", "Makita ti item, kaadu, ken total. Ti presyo iti suli ti sibubukel a benta. Pinduten ti ✕ tapno ikkaten."],
-      ["I-save ti benta", "Kitaen ti petsa, resibo, ken bayad. No cash, iserrek ti naawat, kalpasanna SAVE SALE. Ti sukli ket ti sinsukli."],
-      ["Catalog", "Agbirok, pinduten ti item, kalpasanna baliwan ti presyo, reorder, wenno keywords. Add item ket baro. Remove item ket ikkatenna iti listaan. Agtalinaed dagiti napalabas a benta."]
-    ]
-  }
+const TUTOR_REV = 2;
+const GUIDE_UI = {
+  en: { help:"Help", faq:"FAQ", tutor:"Tutorial", lang:"Language", news:"What's new", menu:"Menu",
+    back:"Back", next:"Next", skip:"Skip", done:"Done", close:"Close",
+    newsTitle:"Tutorial updated", newsBody:"The help guide changed. Open the tutorial to see the new steps.",
+    newsGo:"Open tutorial", newsLater:"Later",
+    langLead:"Choose the language for Help, FAQ, and the tutorial.",
+    langName:{en:"English", tl:"Tagalog", il:"Ilokano"},
+    start:"Start tutorial" },
+  tl: { help:"Tulong", faq:"FAQ", tutor:"Tutorial", lang:"Wika", news:"Ano ang bago", menu:"Menu",
+    back:"Bumalik", next:"Susunod", skip:"Laktawan", done:"Tapos na", close:"Isara",
+    newsTitle:"Na-update ang tutorial", newsBody:"Nabago ang gabay. Buksan ang tutorial para makita ang bagong hakbang.",
+    newsGo:"Buksan ang tutorial", newsLater:"Mamaya",
+    langLead:"Piliin ang wika para sa Tulong, FAQ, at tutorial.",
+    langName:{en:"English", tl:"Tagalog", il:"Ilokano"},
+    start:"Simulan ang tutorial" },
+  il: { help:"Tulong", faq:"FAQ", tutor:"Tutorial", lang:"Pagsasao", news:"Ania ti baro", menu:"Menu",
+    back:"Agsubli", next:"Sumaruno", skip:"Laktawan", done:"Nalpasen", close:"Irekep",
+    newsTitle:"Na-update ti tutorial", newsBody:"Nagbaliw ti gabay. Luktan ti tutorial tapno makitam dagiti baro a addang.",
+    newsGo:"Luktan ti tutorial", newsLater:"Saaruno",
+    langLead:"Pilien ti pagsasao para iti Tulong, FAQ, ken tutorial.",
+    langName:{en:"English", tl:"Tagalog", il:"Ilokano"},
+    start:"Rugian ti tutorial" }
 };
-const TUTOR_SPOTS = [
-  { page:"reg", lock:true, scroll:"top", sel:["#lockBox"], signedIn:["#whoBar"] },
-  { page:"reg", scroll:"top", sel:["#rSearch", "#catChips"] },
-  { page:"reg", scroll:".hit-row", sel:[".hit-row"] },
-  { page:"reg", scroll:"top", sel:[".cart-card"] },
-  { page:"reg", scroll:"#saveBtn", sel:["#saleMeta", ".pay-card"] },
-  { page:"cat", scroll:"catalog", sel:["nav button[data-p='cat']", "#catSearch", "#catTable tr[data-code]", "#nPrice", "#nReo", "#nKeys", "#addItemBtn"] }
+const HELP = {
+  en:"S&K Register keeps three books: Groceries, Gas station, and Fishing supplies. Sell on Register. Change a price, reorder level, or keywords on Catalog. Stock shows what is left. Sales lists posted lines. Close is the day’s report. Open this menu for the FAQ and the full tutorial. The tutorial does not start by itself. After an update, close the site and open it again.",
+  tl:"May tatlong libro ang S&K Register: Groceries, Gas station, at Fishing supplies. Magbenta sa Register. Baguhin ang presyo, reorder, o keywords sa Catalog. Ipinapakita ng Stock ang natitira. Nasa Sales ang mga nai-save na linya. Nasa Close ang ulat ng araw. Buksan ang menu na ito para sa FAQ at buong tutorial. Hindi kusang magsisimula ang tutorial. Pagkatapos ng update, isara ang site at buksan muli.",
+  il:"Addaan ti tallo a libro ti S&K Register: Groceries, Gas station, ken Fishing supplies. Aglako iti Register. Baliwan ti presyo, reorder, wenno keywords iti Catalog. Ipakit ti Stock ti nabati. Adda iti Sales dagiti naisurat a linya. Adda iti Close ti report ti aldaw. Luktan daytoy a menu para iti FAQ ken ti napno a tutorial. Saan a mangrugi a mismo ti tutorial. Kalpasan ti update, irekep ti site sa ilukat manen."
+};
+const NEWS = {
+  en:"Help, FAQ, and the full tutorial now live in this menu. The tutorial no longer opens by itself. When the guide changes, a note says Tutorial updated.",
+  tl:"Nasa menu na ang Tulong, FAQ, at buong tutorial. Hindi na kusang bubukas ang tutorial. Kapag nagbago ang gabay, may lalabas na Na-update ang tutorial.",
+  il:"Addaen iti daytoy a menu ti Tulong, FAQ, ken ti napno a tutorial. Saanen a lukat a mismo ti tutorial. No agbaliw ti gabay, makitam ti Na-update ti tutorial."
+};
+const FAQ = {
+  en:[
+    {q:"How do I sell gas?", a:"Gas is sold by the liter. Set the pump price on Catalog first. On Register, tap Gas, type the liters beside Unleaded or Premium, then tap Add L."},
+    {q:"How do I change a price?", a:"Open Catalog, search the item, and tap the row. Change Presyo, then Save changes. The new price is what the register charges."},
+    {q:"How do I add or remove an item?", a:"On Catalog, fill in the form and tap Add item. To remove one, tap it first, then Remove item. Past sales stay. A removed item does not come back on its own."},
+    {q:"Can one sale mix groceries, gas, and fishing?", a:"Yes. One cart can hold all three. Each line is saved into its own book, with the same receipt number."},
+    {q:"What is sukli?", a:"Sukli is the change. Enter the cash they handed you under Bayad / Tendered, then tap SAVE SALE."},
+    {q:"How do I switch cashier?", a:"Tap Switch, choose the name, enter that person’s PIN, then Open register."},
+    {q:"Where is the daily report?", a:"Open Close. Pick the store and the dates. Enter the opening float and the counted cash. Download this store, or all 3 stores."},
+    {q:"How do I back up?", a:"Open Backup, then Export. Keep that file. Import on this iPad brings the books back. This includes sales, catalog, and staff."},
+    {q:"The screen looks old.", a:"Close the site completely, then open it again. The register updates when it is opened fresh."},
+    {q:"The sound is too loud.", a:"Open Backup and uncheck Sound. The taps and the save beep stop."}
+  ],
+  tl:[
+    {q:"Paano magbenta ng gas?", a:"Litro ang gas. Itakda muna ang presyo sa Catalog. Sa Register, pindutin ang Gas, ilagay ang litro sa tabi ng Unleaded o Premium, tapos Add L."},
+    {q:"Paano palitan ang presyo?", a:"Buksan ang Catalog, hanapin ang item, at pindutin ang row. Baguhin ang Presyo, tapos Save changes. Iyon ang sisingilin ng register."},
+    {q:"Paano magdagdag o mag-alis ng item?", a:"Sa Catalog, punan ang form at pindutin ang Add item. Para mag-alis, pindutin muna ang item, tapos Remove item. Nanatili ang lumang benta. Hindi kusang babalik ang inalis."},
+    {q:"Puwede bang paghaluin ang groceries, gas, at fishing?", a:"Oo. Isang cart para sa tatlo. Bawat linya ay napupunta sa sariling libro, parehong numero ng resibo."},
+    {q:"Ano ang sukli?", a:"Ang sukli ay ang change. Ilagay ang perang tinanggap sa Bayad / Tendered, tapos SAVE SALE."},
+    {q:"Paano magpalit ng cashier?", a:"Pindutin ang Switch, piliin ang pangalan, ilagay ang PIN niya, tapos Open register."},
+    {q:"Saan ang ulat ng araw?", a:"Buksan ang Close. Piliin ang store at ang petsa. Ilagay ang opening float at ang bilang ng cash. I-download ang store na ito, o ang tatlo."},
+    {q:"Paano mag-backup?", a:"Buksan ang Backup, tapos Export. Itago ang file. Ang Import sa iPad na ito ang nagbabalik ng mga libro. Kasama ang benta, catalog, at staff."},
+    {q:"Luma ang nakikita sa screen.", a:"Isara nang tuluyan ang site, tapos buksan muli. Nag-u-update ang register kapag binuksan nang bago."},
+    {q:"Malakas ang tunog.", a:"Buksan ang Backup at alisin ang check sa Sound. Titigil ang beep sa tap at sa save."}
+  ],
+  il:[
+    {q:"Kasano ti aglako ti gas?", a:"Litro ti gas. Ikabil nga umuna ti presyo iti Catalog. Iti Register, pinduten ti Gas, iserrek ti litro iti abay ti Unleaded wenno Premium, kalpasanna Add L."},
+    {q:"Kasano ti agbaliw ti presyo?", a:"Luktan ti Catalog, biroken ti item, ken pinduten ti linya. Baliwan ti Presyo, kalpasanna Save changes. Dayta ti bayadan iti register."},
+    {q:"Kasano ti manginayon wenno mangikkat ti item?", a:"Iti Catalog, punnuan ti form ken pinduten ti Add item. Tapno ikkaten, pinduten nga umuna ti item, kalpasanna Remove item. Agtalinaed dagiti napalabas a benta. Saan a sublien a mismo ti naikkat."},
+    {q:"Mabalin kadi a mairaman ti groceries, gas, ken fishing?", a:"Wen. Maysa a cart ti tallo. Tunggal linya ket mapan iti bukodna a libro, isu met laeng ti numero ti resibo."},
+    {q:"Ania ti sukli?", a:"Ti sukli ket ti sinsukli. Iserrek ti kuarta a naawat iti Bayad / Tendered, kalpasanna SAVE SALE."},
+    {q:"Kasano ti agsukat ti cashier?", a:"Pinduten ti Switch, pilien ti nagan, iserrek ti PIN na, kalpasanna Open register."},
+    {q:"Ayanna ti report ti aldaw?", a:"Luktan ti Close. Pilien ti store ken ti petsa. Iserrek ti opening float ken ti naibilang a cash. I-download daytoy a store, wenno ti tallo."},
+    {q:"Kasano ti ag-backup?", a:"Luktan ti Backup, kalpasanna Export. Idulin ti file. Ti Import iti daytoy nga iPad ti mangisubli kadagiti libro. Mairaman ti benta, catalog, ken staff."},
+    {q:"Daan ti makita iti screen.", a:"Irekep a naan-anay ti site, kalpasanna ilukat manen. Ag-update ti register no maluktan a baro."},
+    {q:"Natapok ti tunog.", a:"Luktan ti Backup ken ikkaten ti check iti Sound. Isardeng ti beep iti tap ken iti save."}
+  ]
+};
+const GUIDE = [
+  { page:"reg", scroll:"top", sel:["#menuBtn"],
+    en:["Menu", "Tap here for Help, FAQ, this tutorial, and language. The tour does not start by itself."],
+    tl:["Menu", "Pindutin ito para sa Tulong, FAQ, tutorial, at wika. Hindi kusang magsisimula ang tour."],
+    il:["Menu", "Pinduten daytoy para iti Tulong, FAQ, tutorial, ken pagsasao. Saan a mangrugi a mismo ti tour."] },
+  { page:"reg", lock:true, scroll:"top", sel:["#lockBox"], signedIn:["#whoBar"],
+    en:["Sign in", "Tap your name, enter your PIN, then Open register. Switch changes the cashier."],
+    tl:["Mag-sign in", "Pindutin ang pangalan, ilagay ang PIN, tapos Open register. Ang Switch ang nagpapalit ng cashier."],
+    il:["Ag-sign in", "Pinduten ti nagan, iserrek ti PIN, kalpasanna Open register. Ti Switch ti mangsukat ti cashier."] },
+  { page:"reg", scroll:"top", sel:["#tabs"],
+    en:["Pages", "Register sells. Catalog edits items. Stock, Sales, and Close are the books. Invoice, Staff, and Backup are at the end."],
+    tl:["Mga pahina", "Ang Register ang pagbenta. Ang Catalog ang pagbabago ng item. Stock, Sales, at Close ang mga libro. Nasa dulo ang Invoice, Staff, at Backup."],
+    il:["Pahina", "Ti Register ti paglakoan. Ti Catalog ti panagbaliw ti item. Stock, Sales, ken Close dagiti libro. Iti pungto ti Invoice, Staff, ken Backup."] },
+  { page:"reg", scroll:"top", sel:["#rSearch", "#catChips"],
+    en:["Find an item", "Type a word, or tap Groceries, Gas, or Fishing. One sale can mix all three."],
+    tl:["Hanapin ang item", "Mag-type ng salita, o pindutin ang Groceries, Gas, o Fishing. Puwedeng paghaluin sa isang benta."],
+    il:["Biroken ti item", "I-type ti sao, wenno pinduten ti Groceries, Gas, wenno Fishing. Mabalin a mairaman ti tallo iti maysa a benta."] },
+  { page:"reg", scroll:".hit-row", sel:[".hit-row"],
+    en:["Quantity", "The number is beside the item. Groceries and fishing are pieces. Tap Add."],
+    tl:["Dami", "Nasa tabi ng item ang numero. Piraso ang groceries at fishing. Pindutin ang Add."],
+    il:["Kaadu", "Adda ti numero iti abay ti item. Piraso ti groceries ken fishing. Pinduten ti Add."] },
+  { page:"reg", prep:"gas", scroll:".hit-row", sel:[".hit-row"],
+    en:["Gas by the liter", "Set the pump price on Catalog. Type the liters here, then tap Add L."],
+    tl:["Gas kada litro", "Itakda ang presyo sa Catalog. Ilagay ang litro dito, tapos Add L."],
+    il:["Gas iti litro", "Ikabil ti presyo iti Catalog. Iserrek ti litro ditoy, kalpasanna Add L."] },
+  { page:"reg", scroll:"top", sel:[".cart-card"],
+    en:["Cart", "Item, quantity, and line total stay on screen. The corner amount is the whole sale. Tap ✕ to remove a line."],
+    tl:["Cart", "Kita ang item, dami, at total. Ang halaga sa sulok ang buong benta. Pindutin ang ✕ para alisin."],
+    il:["Cart", "Makita ti item, kaadu, ken total. Ti presyo iti suli ti sibubukel a benta. Pinduten ti ✕ tapno ikkaten."] },
+  { page:"reg", scroll:"#saveBtn", sel:["#saleMeta", ".pay-card"],
+    en:["Save the sale", "Check the date, receipt, and payment. For cash, enter what they paid, then tap SAVE SALE. Sukli is the change."],
+    tl:["I-save ang benta", "Tingnan ang petsa, resibo, at bayad. Kung cash, ilagay ang tinanggap, tapos SAVE SALE. Ang sukli ay ang change."],
+    il:["I-save ti benta", "Kitaen ti petsa, resibo, ken bayad. No cash, iserrek ti naawat, kalpasanna SAVE SALE. Ti sukli ket ti sinsukli."] },
+  { page:"cat", scroll:"catalog", sel:["#tabs button[data-p='cat']", "#catSearch", "#catTable tr[data-code]", "#nPrice", "#nReo", "#nKeys", "#addItemBtn"],
+    en:["Catalog", "Search, tap the item, then change the price, reorder, or keywords. Add item makes a new one. Remove item drops it from the list. Past sales stay."],
+    tl:["Catalog", "Maghanap, pindutin ang item, tapos baguhin ang presyo, reorder, o keywords. Add item ay bago. Remove item ay aalis sa listahan. Nanatili ang lumang benta."],
+    il:["Catalog", "Agbirok, pinduten ti item, kalpasanna baliwan ti presyo, reorder, wenno keywords. Add item ket baro. Remove item ket ikkatenna iti listaan. Agtalinaed dagiti napalabas a benta."] },
+  { page:"stock", scroll:"#stockBars", sel:["#tabs button[data-p='stock']", "#stockBars"],
+    en:["Stock", "The green bar is what is left in this book. A short bar means it is almost out."],
+    tl:["Stock", "Ang green bar ang natitira sa librong ito. Maikli ang bar kapag halos ubos na."],
+    il:["Stock", "Ti green bar ti nabati iti daytoy a libro. Ababa ti bar no dandani nga awan."] },
+  { page:"sales", scroll:"#sales", sel:["#tabs button[data-p='sales']", "#salesTable"],
+    en:["Sales", "Each posted line is one row. Do not edit it. Add a new sale if you need a correction."],
+    tl:["Sales", "Bawat nai-save na linya ay isang row. Huwag itong baguhin. Magdagdag ng bagong benta kung may ituwid."],
+    il:["Sales", "Tunggal naisurat a linya ket maysa a row. Saan nga baliwan. Inayon ti baro a benta no masapul ti koreksion."] },
+  { page:"close", scroll:"top", sel:["#cStoreChips", "#cRangeChips"],
+    en:["Close the day", "Pick the store and the dates. Each store has its own report."],
+    tl:["Isara ang araw", "Piliin ang store at ang petsa. May sariling ulat ang bawat store."],
+    il:["Irekep ti aldaw", "Pilien ti store ken ti petsa. Adda bukod a report ti tunggal store."] },
+  { page:"close", scroll:"#cFloat", sel:["#cFloat", "#cCount", "#repThis", "#repAll"],
+    en:["Download the report", "Enter the opening float and the counted cash. Then download this store, or all 3 books."],
+    tl:["I-download ang ulat", "Ilagay ang opening float at ang nabilang na cash. I-download ang store na ito, o ang 3 libro."],
+    il:["I-download ti report", "Iserrek ti opening float ken ti naibilang a cash. I-download daytoy a store, wenno ti 3 a libro."] },
+  { page:"inv", scroll:"#iSave", sel:["#iSup", "#iAmt", "#iSave"],
+    en:["Invoice", "Save a supplier bill here. The photo stays on this iPad."],
+    tl:["Invoice", "I-save dito ang resibo ng supplier. Nasa iPad na ito ang larawan."],
+    il:["Invoice", "I-save ditoy ti resibo ti supplier. Iti daytoy nga iPad ti ladawan."] },
+  { page:"staff", scroll:"#eAdd", sel:["#eName", "#eAdd"],
+    en:["Staff", "Add a cashier with the manager PIN. Their own 4-digit PIN is what they use to sign in."],
+    tl:["Staff", "Magdagdag ng cashier gamit ang manager PIN. Ang sarili nilang 4-digit PIN ang pang-sign in."],
+    il:["Staff", "Inayon ti cashier babaen ti manager PIN. Ti bukodda a 4-digit a PIN ti usarda nga ag-sign in."] },
+  { page:"set", scroll:"#expBtn", sel:["#sSound", "#expBtn", "#impFile"],
+    en:["Backup", "Export saves every book. Import brings a file back onto this iPad. Uncheck Sound if the counter is loud."],
+    tl:["Backup", "Sine-save ng Export ang bawat libro. Ibinalik ng Import ang file sa iPad na ito. Alisin ang Sound kung malakas sa counter."],
+    il:["Backup", "Iduldulin ti Export ti tunggal libro. Isubli ti Import ti file iti daytoy nga iPad. Ikkaten ti Sound no natapok iti counter."] },
+  { page:"reg", scroll:"top", sel:["#menuBtn"],
+    en:["When the guide changes", "A note says Tutorial updated. Open it from this menu. Close the site and open it again after an update."],
+    tl:["Kapag nagbago ang gabay", "May lalabas na Na-update ang tutorial. Buksan ito sa menu. Isara ang site at buksan muli pagkatapos ng update."],
+    il:["No agbaliw ti gabay", "Adda nota a Na-update ti tutorial. Luktan iti daytoy a menu. Irekep ti site sa ilukat manen kalpasan ti update."] }
 ];
 let tutorStep = 0;
+let helpTab = "help";
+function uiPack() { return GUIDE_UI[DB.lang] || GUIDE_UI.en; }
+function tutorStamp() {
+  const raw = String(TUTOR_REV) + JSON.stringify(GUIDE.map(g => [g.en, g.tl, g.il])) + JSON.stringify(HELP) + JSON.stringify(FAQ) + JSON.stringify(NEWS);
+  let h = 2166136261;
+  for (let i = 0; i < raw.length; i++) { h ^= raw.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(16);
+}
+function tutorPending() { return DB.tutorStamp !== tutorStamp(); }
+function ackTutor() {
+  DB.tutorStamp = tutorStamp();
+  DB.tutorialDone = true;
+  save();
+  maybeTutorNews();
+}
+function initTutorStamp() {
+  if (!tutorIsNew) return;
+  DB.tutorStamp = tutorStamp();
+  save();
+}
+function applyChromeText() {
+  const u = uiPack();
+  $("menuBtn").setAttribute("aria-label", u.menu);
+  $("lockHelp").textContent = u.help;
+  $("drawerClose").setAttribute("aria-label", u.close);
+  $("tutorNewsTitle").textContent = u.newsTitle;
+  $("tutorNewsText").textContent = u.newsBody;
+  $("tutorNewsGo").textContent = u.newsGo;
+  $("tutorNewsLater").textContent = u.newsLater;
+}
+function maybeTutorNews() {
+  applyChromeText();
+  const pending = tutorPending();
+  $("menuBtn").classList.toggle("fresh", pending);
+  const show = pending && !$("tutor").classList.contains("on") && !$("lock").classList.contains("on");
+  $("tutorNews").classList.toggle("on", show);
+}
 function showPage(id) {
-  document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x.dataset.p===id));
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x.dataset.p===id));
   document.querySelectorAll(".page").forEach(x => x.classList.toggle("on", x.id===id));
 }
 function showTutor(on) {
@@ -1457,9 +1666,14 @@ function showTutor(on) {
     document.body.classList.remove("tutor-cat");
     $("tutorShade").style.clipPath = "";
     $("tutorRings").innerHTML = "";
+    listFilter = "";
+    fillChips();
+    renderHits();
     if (!DB.session) showLock(true);
+    else maybeTutorNews();
     return;
   }
+  $("tutorNews").classList.remove("on");
   tutorStep = 0;
   const picking = !DB.lang;
   $("tutorPick").style.display = picking ? "block" : "none";
@@ -1470,8 +1684,7 @@ function showTutor(on) {
   if (!picking) renderTutor();
 }
 function finishTutor() {
-  DB.tutorialDone = true;
-  save();
+  ackTutor();
   showPage("reg");
   window.scrollTo(0, 0);
   showTutor(false);
@@ -1486,7 +1699,7 @@ function drawTutor(els) {
   els.forEach(el => {
     const r = el.getBoundingClientRect();
     if (r.width < 2 || r.height < 2) return;
-    if (r.bottom < 70 || r.top > window.innerHeight - 8) return;
+    if (r.bottom <= 0 || r.top >= window.innerHeight - 4) return;
     const left = Math.max(4, r.left - pad);
     const top = Math.max(4, r.top - pad);
     const right = Math.min(window.innerWidth - 4, r.right + pad);
@@ -1566,19 +1779,25 @@ function placeBubble(rects) {
   bubble.style.setProperty("--ay", clamp((p.top+p.height/2)-pick.y-9, 16, bh-28)+"px");
 }
 function renderTutor() {
-  const pack = TUTOR[DB.lang] || TUTOR.en;
-  const step = pack.steps[tutorStep];
-  const spot = TUTOR_SPOTS[tutorStep];
+  const u = uiPack();
+  const lang = DB.lang || "en";
+  const step = GUIDE[tutorStep][lang] || GUIDE[tutorStep].en;
+  const spot = GUIDE[tutorStep];
   $("tutorPick").style.display = "none";
   $("tutorBubble").style.display = "block";
-  $("tutorProg").textContent = (tutorStep+1)+" / "+pack.steps.length;
+  $("tutorProg").textContent = (tutorStep+1)+" / "+GUIDE.length;
   $("tutorTitle").textContent = step[0];
   $("tutorText").textContent = step[1];
-  $("tutorBack").textContent = pack.back;
-  $("tutorSkip").textContent = pack.skip;
-  $("tutorNext").textContent = tutorStep===pack.steps.length-1 ? pack.done : pack.next;
+  $("tutorBack").textContent = u.back;
+  $("tutorSkip").textContent = u.skip;
+  $("tutorNext").textContent = tutorStep===GUIDE.length-1 ? u.done : u.next;
   document.body.classList.toggle("tutor-cat", spot.page==="cat");
   showLock(!!(spot.lock && !DB.session));
+  if (spot.page==="reg") {
+    listFilter = spot.prep==="gas" ? "gas" : "";
+    fillChips();
+    renderHits();
+  }
   if (spot.page) showPage(spot.page);
   const sc = (DB.session && spot.signedIn) ? spot.signedIn[0] : spot.scroll;
   if (!sc || sc==="top") window.scrollTo(0, 0);
@@ -1590,6 +1809,56 @@ function renderTutor() {
     if (el) el.scrollIntoView({block:"center", inline:"nearest"});
   }
   requestAnimationFrame(() => requestAnimationFrame(() => drawTutor(tutorTargets(spot))));
+}
+function renderHelp() {
+  const u = uiPack();
+  const lang = DB.lang || "en";
+  $("drawerTitle").textContent = u[helpTab] || u.help;
+  document.querySelectorAll("#drawer [data-help]").forEach(b => {
+    b.textContent = u[b.dataset.help];
+    b.classList.toggle("on", b.dataset.help===helpTab);
+    b.classList.toggle("fresh", b.dataset.help==="news" && tutorPending());
+  });
+  const body = $("helpBody");
+  if (helpTab==="faq") {
+    body.innerHTML = (FAQ[lang]||FAQ.en).map(x =>
+      "<details class='faq'><summary>"+esc(x.q)+"</summary><p>"+esc(x.a)+"</p></details>").join("");
+    return;
+  }
+  if (helpTab==="lang") {
+    body.innerHTML = "<p>"+esc(u.langLead)+"</p>"+
+      ["en","tl","il"].map(code => "<button type='button' class='btn btn-g' data-setlang='"+code+"' style='margin-top:8px"+(DB.lang===code?";outline:3px solid #C9A227":"")+"'>"+esc(u.langName[code])+"</button>").join("");
+    body.querySelectorAll("[data-setlang]").forEach(b => b.onclick = () => {
+      DB.lang = b.dataset.setlang;
+      save();
+      renderHelp();
+      applyChromeText();
+      sndTap();
+    });
+    return;
+  }
+  if (helpTab==="news") {
+    body.innerHTML = "<p>"+esc(NEWS[lang]||NEWS.en)+"</p><button type='button' class='btn btn-a' id='newsStart' style='margin-top:8px'>"+esc(u.start)+"</button>";
+    $("newsStart").onclick = () => startTutor();
+    return;
+  }
+  body.innerHTML = "<p>"+esc(HELP[lang]||HELP.en)+"</p><button type='button' class='btn btn-a' id='helpStart' style='margin-top:8px'>"+esc(u.start)+"</button>";
+  $("helpStart").onclick = () => startTutor();
+}
+function openDrawer(tab) {
+  helpTab = tab || "help";
+  $("drawer").classList.add("on");
+  $("drawerScrim").classList.add("on");
+  renderHelp();
+  sndNav();
+}
+function closeDrawer() {
+  $("drawer").classList.remove("on");
+  $("drawerScrim").classList.remove("on");
+}
+function startTutor() {
+  closeDrawer();
+  showTutor(true);
 }
 $("tutor").querySelectorAll("[data-lang]").forEach(b => b.onclick = () => {
   DB.lang = b.dataset.lang;
@@ -1614,17 +1883,27 @@ $("tutorBack").onclick = () => {
   renderTutor();
 };
 $("tutorNext").onclick = () => {
-  const pack = TUTOR[DB.lang] || TUTOR.en;
-  if (tutorStep>=pack.steps.length-1) { finishTutor(); sndOk(); return; }
+  if (tutorStep>=GUIDE.length-1) { finishTutor(); sndOk(); return; }
   tutorStep++;
   renderTutor();
   sndTap();
 };
 $("tutorSkip").onclick = () => { finishTutor(); sndTap(); };
-$("tutorBtn").onclick = () => { DB.lang = ""; showTutor(true); sndNav(); };
+$("menuBtn").onclick = () => openDrawer("help");
+$("lockHelp").onclick = () => openDrawer("help");
+$("drawerClose").onclick = () => { closeDrawer(); sndTap(); };
+$("drawerScrim").onclick = () => closeDrawer();
+document.querySelectorAll("#drawer [data-help]").forEach(b => b.onclick = () => {
+  if (b.dataset.help==="tutor") { startTutor(); return; }
+  helpTab = b.dataset.help;
+  renderHelp();
+  sndTap();
+});
+$("tutorNewsGo").onclick = () => startTutor();
+$("tutorNewsLater").onclick = () => { ackTutor(); sndTap(); };
 window.addEventListener("resize", () => {
   if (!$("tutor").classList.contains("on") || !DB.lang || $("tutorPick").style.display!=="none") return;
-  drawTutor(tutorTargets(TUTOR_SPOTS[tutorStep]));
+  drawTutor(tutorTargets(GUIDE[tutorStep]));
 });
 
 function renderAll() {
@@ -1648,7 +1927,8 @@ $("rRcpt").value = st().settings.nextRcpt;
 renderAll();
 applySession();
 if (!DB.session) showLock(true);
-if (!DB.tutorialDone) showTutor(true);
+initTutorStamp();
+maybeTutorNews();
 
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
