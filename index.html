@@ -479,6 +479,58 @@ const SEED = [
   {code:"COWB-L",name:"Cow Bell Condensarap big",cat:"Groceries",unit:"pc",cost:0,price:55,reo:0,start:0,keys:"cowbell, condensarap",photo:""}
 ];
 const GROC_REFRESH = new Set(["YUM-HD","YUM-TO","CHUMZ","FISHCK","BAWANG","ALI-SW","ALI-BBQ","MUNCH-R","MUNCH-G","BANGUS","STAR-M","RENO","LC-HAM","LC-CHK","LC-TUN","LC-BAC","ALASKA-S","BEAR-S","NES-CW","NES-ORG","NES-40","KOP-BR","KOP-BL","KOP-BK","GT-W","GT-CH","GT-PREM","GT-GRAN","CM-150","CM-220","OATS-WG","OATS-QC","EDEN","CREAM-N","BEAR-P","ALA-300","ALA-840","KT-400","KT-220","KT-150","BONNA","BONAKID","NIDO","CAL-1KG","CAL-BOX","CORN-R","CORN-GH","SODA","SOJU","PABLO","FUND","ALF-L","GINEBRA","FIESTA","TODAYS","DM-CORN","UFC-CORN","MUSH","UFC-PEA","NATA","KAONG","DM-CHK","DM-CRU","DM-SLI","ARG-LOAF","ARG-SAU","ARG-GIN","CDO-KN","FRESCA","TIGA","UNIPAK","HOKK","YT-CB","YT-SAR","YT-HOT","SM-CHILI","SM-CORN","CENT","MALING","KNORR","MAGIC","SWAN-1L","SWAN-4L","SWAN-200","SWAN-PET","DP-VIN1","DP-SOY1","DP-SOY2","DP-VIN2","DP-PET","LORINS","PALM-1.5","UFC-KET","PAPA-KET","MT-SAR","DM-ORG","DM-FIL","PAPA-P","UFC-P","MT-P","DM-CHILI","UFC-CHILI","ALA-EVA","ALA-CLA","ALA-CON","COWBELL","COWB-S","COWB-L"]);
+const EN_KEYS = {
+  UNL:"fuel", PUNL:"premium gasoline, fuel",
+  HOOK6:"fish hook", LINE50:"fishing line", SINK:"lead weight", BAIT:"dried bait",
+  COKE8:"soda, soft drink, cola", COKE15:"soda, soft drink, cola", COKECS:"soda, soft drink, cola, case",
+  PEPSI8:"soda, soft drink, cola", RC8:"soda, soft drink, cola", "C2-500":"green tea, soft drink",
+  WAT500:"drinking water", SML330:"beer", "SM-PALE":"beer", RH330:"beer",
+  "LM-PC":"instant noodles", NOVA:"chips, snack", KPK78:"coffee", EMPTY:"empty bottle",
+  "YUM-HD":"snack, hotdog", "YUM-TO":"snack, tomato", CHUMZ:"snack, cheese", FISHCK:"snack, fish cake",
+  BAWANG:"garlic, snack", "ALI-SW":"sweet corn, snack", "ALI-BBQ":"barbecue, snack",
+  "MUNCH-R":"green peas, snack, spicy", "MUNCH-G":"green peas, snack", BANGUS:"fish crackers, snack",
+  "STAR-M":"margarine", RENO:"liver spread", "LC-HAM":"ham spread", "LC-CHK":"chicken spread",
+  "LC-TUN":"tuna spread", "LC-BAC":"bacon spread",
+  "ALASKA-S":"condensed milk, milk", "BEAR-S":"powdered milk, milk",
+  "NES-CW":"coffee", "NES-ORG":"coffee", "NES-40":"coffee",
+  "KOP-BR":"coffee", "KOP-BL":"coffee", "KOP-BK":"coffee",
+  "GT-W":"coffee", "GT-CH":"coffee, chocolate", "GT-PREM":"coffee", "GT-GRAN":"coffee",
+  "CM-150":"coffee creamer", "CM-220":"coffee creamer",
+  "OATS-WG":"oatmeal", "OATS-QC":"oatmeal", EDEN:"cheese", "CREAM-N":"all purpose cream",
+  "BEAR-P":"powdered milk, milk", "ALA-300":"powdered milk, milk", "ALA-840":"powdered milk, milk",
+  "KT-400":"creamer", "KT-220":"creamer", "KT-150":"creamer",
+  BONNA:"baby milk, infant formula, milk", BONAKID:"toddler milk, formula, milk", NIDO:"toddler milk, formula, milk",
+  "CAL-1KG":"baking powder", "CAL-BOX":"baking powder", "CORN-R":"cornstarch", "CORN-GH":"cornstarch", SODA:"baking soda",
+  SOJU:"liquor, alcohol", PABLO:"liquor, alcohol", FUND:"brandy, liquor, alcohol",
+  "ALF-L":"brandy, liquor, alcohol", GINEBRA:"gin, liquor, alcohol",
+  FIESTA:"fruit cocktail", TODAYS:"mixed fruit, fruit cocktail",
+  "DM-CORN":"cream corn", "UFC-CORN":"whole corn", MUSH:"mushroom", "UFC-PEA":"green peas",
+  NATA:"coconut gel", KAONG:"sugar palm, palm fruit",
+  "DM-CHK":"pineapple", "DM-CRU":"crushed pineapple", "DM-SLI":"pineapple",
+  "ARG-LOAF":"meat loaf", "ARG-SAU":"sausage", "ARG-GIN":"ground pork, ground meat",
+  "CDO-KN":"corned beef", FRESCA:"canned tuna", TIGA:"squid",
+  UNIPAK:"canned mackerel", HOKK:"canned mackerel",
+  "YT-CB":"corned beef", "YT-SAR":"sardines", "YT-HOT":"hot sardines",
+  "SM-CHILI":"canned tuna, chili", "SM-CORN":"canned tuna", CENT:"canned tuna", MALING:"luncheon meat",
+  KNORR:"tamarind soup, sour soup mix", MAGIC:"seasoning",
+  "SWAN-1L":"soy sauce", "SWAN-4L":"soy sauce", "SWAN-200":"soy sauce", "SWAN-PET":"soy sauce",
+  "DP-VIN1":"vinegar", "DP-SOY1":"soy sauce", "DP-SOY2":"soy sauce", "DP-VIN2":"vinegar", "DP-PET":"soy sauce",
+  LORINS:"fish sauce", "PALM-1.5":"cooking oil",
+  "UFC-KET":"banana ketchup", "PAPA-KET":"banana ketchup", "MT-SAR":"sauce",
+  "DM-ORG":"tomato sauce", "DM-FIL":"tomato sauce", "PAPA-P":"banana ketchup", "UFC-P":"banana ketchup",
+  "MT-P":"sauce", "DM-CHILI":"chili sauce", "UFC-CHILI":"chili sauce",
+  "ALA-EVA":"evaporated milk", "ALA-CLA":"condensed milk", "ALA-CON":"condensed milk",
+  COWBELL:"condensed milk", "COWB-S":"condensed milk", "COWB-L":"condensed milk"
+};
+function mergeKeys(a, b) {
+  const parts = String(a||"").split(",").map(s => s.trim()).filter(Boolean);
+  const have = new Set(parts.map(s => s.toLowerCase()));
+  String(b||"").split(",").forEach(s => {
+    const t = s.trim();
+    if (t && !have.has(t.toLowerCase())) { parts.push(t); have.add(t.toLowerCase()); }
+  });
+  return parts.join(", ");
+}
 
 const $ = id => document.getElementById(id);
 let audioCtx = null;
@@ -548,7 +600,9 @@ function load() {
       const book = d.stores[s.id];
       const hits = [];
       book.catalog.forEach((c,i) => { if (c.code===item.code) hits.push(i); });
-      if (!hits.length) { book.catalog.push(item); return; }
+      const keys = mergeKeys(item.keys, EN_KEYS[item.code]);
+      if (!hits.length) { book.catalog.push({...item, keys}); return; }
+      book.catalog[hits[0]].keys = mergeKeys(book.catalog[hits[0]].keys, keys);
       if (hits.length > 1) {
         for (let i = hits.length - 1; i >= 1; i--) book.catalog.splice(hits[i], 1);
       }
