@@ -364,8 +364,117 @@ const SEED = [
   {code:"HOOK6",name:"Fish hook pack #6",cat:"Fishing supplies",unit:"pack",cost:15,price:25,reo:5,start:10,keys:"hook,kawit,fishing,bingwit"},
   {code:"LINE50",name:"Fishing line 50m",cat:"Fishing supplies",unit:"pc",cost:35,price:55,reo:3,start:8,keys:"line,nylon,fishing,pisi"},
   {code:"SINK",name:"Sinker / lead weight",cat:"Fishing supplies",unit:"pc",cost:8,price:15,reo:8,start:20,keys:"sinker,tingga,weight,fishing"},
-  {code:"BAIT",name:"Dried bait / pain",cat:"Fishing supplies",unit:"pack",cost:12,price:20,reo:5,start:12,keys:"bait,pain,fishing"}
+  {code:"BAIT",name:"Dried bait / pain",cat:"Fishing supplies",unit:"pack",cost:12,price:20,reo:5,start:12,keys:"bait,pain,fishing"},
+  {code:"YUM-HD",name:"Yum Shots Hotdog",cat:"Groceries",unit:"stick",cost:0,price:2,reo:0,start:0,keys:"yum shots, hotdog, meryenda, stick",photo:""},
+  {code:"YUM-TO",name:"Yum Shots Tomato",cat:"Groceries",unit:"stick",cost:0,price:2,reo:0,start:0,keys:"yum shots, tomato, meryenda, stick",photo:""},
+  {code:"CHUMZ",name:"Chumz Cheese Ring",cat:"Groceries",unit:"stick",cost:0,price:2,reo:0,start:0,keys:"chumz, cheese ring, meryenda, stick",photo:""},
+  {code:"FISHCK",name:"Fish Cake corn puff",cat:"Groceries",unit:"stick",cost:0,price:2,reo:0,start:0,keys:"fish cake, meryenda, stick",photo:""},
+  {code:"BAWANG",name:"Bawang na Bawang 3-in-1",cat:"Groceries",unit:"stick",cost:0,price:2,reo:0,start:0,keys:"bawang, lips, meryenda, stick",photo:""},
+  {code:"ALI-SW",name:"Alibaba Sweet Corn",cat:"Groceries",unit:"stick",cost:0,price:2,reo:0,start:0,keys:"alibaba, sweet corn, meryenda, stick",photo:""},
+  {code:"ALI-BBQ",name:"Alibaba Barbecue",cat:"Groceries",unit:"stick",cost:0,price:2,reo:0,start:0,keys:"alibaba, barbecue, meryenda, stick",photo:""},
+  {code:"MUNCH-R",name:"Muncher green peas Beef Spicy jumbo",cat:"Groceries",unit:"pc",cost:0,price:10,reo:0,start:0,keys:"muncher, spicy, peas, meryenda",photo:""},
+  {code:"MUNCH-G",name:"Muncher green peas Original jumbo",cat:"Groceries",unit:"pc",cost:0,price:10,reo:0,start:0,keys:"muncher, peas, meryenda",photo:""},
+  {code:"BANGUS",name:"Sizzling Bangus crackers bundle",cat:"Groceries",unit:"pc",cost:0,price:22,reo:0,start:0,keys:"bangus, crackers",photo:""},
+  {code:"STAR-M",name:"Star margarine tub",cat:"Groceries",unit:"pc",cost:0,price:45,reo:0,start:0,keys:"star, margarine, margarina",photo:""},
+  {code:"RENO",name:"Reno liver spread",cat:"Groceries",unit:"pc",cost:0,price:28,reo:0,start:0,keys:"reno, liver, palaman",photo:""},
+  {code:"LC-HAM",name:"Lady's Choice Ham spread",cat:"Groceries",unit:"pc",cost:0,price:18,reo:0,start:0,keys:"ladies choice, ham, palaman",photo:""},
+  {code:"LC-CHK",name:"Lady's Choice Chicken spread",cat:"Groceries",unit:"pc",cost:0,price:18,reo:0,start:0,keys:"ladies choice, chicken, palaman",photo:""},
+  {code:"LC-TUN",name:"Lady's Choice Tuna spread",cat:"Groceries",unit:"pc",cost:0,price:18,reo:0,start:0,keys:"ladies choice, tuna, palaman",photo:""},
+  {code:"LC-BAC",name:"Lady's Choice Bacon spread",cat:"Groceries",unit:"pc",cost:0,price:18,reo:0,start:0,keys:"ladies choice, bacon, palaman",photo:""},
+  {code:"ALASKA-S",name:"Alaska condensed sakto",cat:"Groceries",unit:"pc",cost:0,price:12,reo:0,start:0,keys:"alaska, condensada, sachet, gatas",photo:""},
+  {code:"BEAR-S",name:"Bear Brand Fortified sachet",cat:"Groceries",unit:"pc",cost:0,price:12,reo:0,start:0,keys:"bear brand, gatas, sachet",photo:""},
+  {code:"NES-CW",name:"Nescafé Creamy White twin",cat:"Groceries",unit:"pc",cost:0,price:15,reo:0,start:0,keys:"nescafe, creamy white, kape",photo:""},
+  {code:"NES-ORG",name:"Nescafé Original twin",cat:"Groceries",unit:"pc",cost:0,price:15,reo:0,start:0,keys:"nescafe original, kape",photo:""},
+  {code:"NES-40",name:"Nescafé Classic 40g",cat:"Groceries",unit:"pc",cost:0,price:40,reo:0,start:0,keys:"nescafe 40, kape",photo:""},
+  {code:"KOP-BR",name:"Kopiko Brown twin",cat:"Groceries",unit:"pc",cost:0,price:15,reo:0,start:0,keys:"kopiko brown, kape",photo:""},
+  {code:"KOP-BL",name:"Kopiko Blanca",cat:"Groceries",unit:"pc",cost:0,price:15,reo:0,start:0,keys:"kopiko blanca, kape",photo:""},
+  {code:"KOP-BK",name:"Kopiko Black 3-in-1",cat:"Groceries",unit:"pc",cost:0,price:15,reo:0,start:0,keys:"kopiko black, kape",photo:""},
+  {code:"GT-W",name:"Great Taste White",cat:"Groceries",unit:"pc",cost:0,price:12,reo:0,start:0,keys:"great taste, white, kape",photo:""},
+  {code:"GT-CH",name:"Great Taste Choco",cat:"Groceries",unit:"pc",cost:0,price:12,reo:0,start:0,keys:"great taste, choco, kape",photo:""},
+  {code:"GT-PREM",name:"Great Taste Premium Classic 40g",cat:"Groceries",unit:"pc",cost:0,price:52,reo:0,start:0,keys:"great taste, premium, kape",photo:""},
+  {code:"GT-GRAN",name:"Great Taste Granules Strong 40g",cat:"Groceries",unit:"pc",cost:0,price:52,reo:0,start:0,keys:"great taste, granules, kape",photo:""},
+  {code:"CM-150",name:"Coffee-Mate 150g",cat:"Groceries",unit:"pc",cost:0,price:52,reo:0,start:0,keys:"coffeemate, 150, creamer",photo:""},
+  {code:"CM-220",name:"Coffee-Mate 220g",cat:"Groceries",unit:"pc",cost:0,price:68,reo:0,start:0,keys:"coffeemate, 220, creamer",photo:""},
+  {code:"OATS-WG",name:"Golden Oats Whole Grain",cat:"Groceries",unit:"pc",cost:0,price:62,reo:0,start:0,keys:"oats, golden, oatmeal",photo:""},
+  {code:"OATS-QC",name:"Golden Oats Quick Cooking",cat:"Groceries",unit:"pc",cost:0,price:43,reo:0,start:0,keys:"oats, oatmeal",photo:""},
+  {code:"EDEN",name:"Eden cheese box",cat:"Groceries",unit:"pc",cost:0,price:47,reo:0,start:0,keys:"eden, keso, cheese",photo:""},
+  {code:"CREAM-N",name:"Nestlé All Purpose Cream",cat:"Groceries",unit:"pc",cost:0,price:50,reo:0,start:0,keys:"cream, nestle, krema",photo:""},
+  {code:"BEAR-P",name:"Bear Brand Fortified pouch",cat:"Groceries",unit:"pc",cost:0,price:90,reo:0,start:0,keys:"bear brand, pouch, gatas",photo:""},
+  {code:"ALA-300",name:"Alaska Fortified 300g",cat:"Groceries",unit:"pc",cost:0,price:95,reo:0,start:0,keys:"alaska 300, gatas",photo:""},
+  {code:"ALA-840",name:"Alaska Fortified 840g",cat:"Groceries",unit:"pc",cost:0,price:264,reo:0,start:0,keys:"alaska 840, gatas",photo:""},
+  {code:"KT-400",name:"Krem-Top 400g",cat:"Groceries",unit:"pc",cost:0,price:105,reo:0,start:0,keys:"kremtop 400, creamer",photo:""},
+  {code:"KT-220",name:"Krem-Top 220g",cat:"Groceries",unit:"pc",cost:0,price:60,reo:0,start:0,keys:"kremtop 220, creamer",photo:""},
+  {code:"KT-150",name:"Krem-Top 150g",cat:"Groceries",unit:"pc",cost:0,price:36,reo:0,start:0,keys:"kremtop 150, creamer",photo:""},
+  {code:"BONNA",name:"Bonna 0-6 months 350g",cat:"Groceries",unit:"pc",cost:0,price:280,reo:0,start:0,keys:"bonna, infant, gatas, formula",photo:""},
+  {code:"BONAKID",name:"Bonakid 1-3 350g",cat:"Groceries",unit:"pc",cost:0,price:260,reo:0,start:0,keys:"bonakid, gatas, formula",photo:""},
+  {code:"NIDO",name:"Nido Junior 1+ 400g",cat:"Groceries",unit:"pc",cost:0,price:280,reo:0,start:0,keys:"nido, gatas, formula",photo:""},
+  {code:"CAL-1KG",name:"Calumet baking powder 1kg",cat:"Groceries",unit:"pc",cost:0,price:229,reo:0,start:0,keys:"calumet, baking powder, pampaalsa",photo:""},
+  {code:"CAL-BOX",name:"Calumet / Queen baking powder box",cat:"Groceries",unit:"pc",cost:0,price:45,reo:0,start:0,keys:"baking powder, calumet, queen, pampaalsa",photo:""},
+  {code:"CORN-R",name:"RAM Pure Cornstarch",cat:"Groceries",unit:"pc",cost:0,price:35,reo:0,start:0,keys:"cornstarch, ram, gawgaw",photo:""},
+  {code:"CORN-GH",name:"Golden Harvest cornstarch",cat:"Groceries",unit:"pc",cost:0,price:35,reo:0,start:0,keys:"cornstarch, gawgaw",photo:""},
+  {code:"SODA",name:"Baking soda box",cat:"Groceries",unit:"pc",cost:0,price:25,reo:0,start:0,keys:"baking soda, soda",photo:""},
+  {code:"SOJU",name:"Chingu Soju 360ml",cat:"Groceries",unit:"pc",cost:0,price:80,reo:0,start:0,keys:"soju, chingu, alak",photo:""},
+  {code:"PABLO",name:"Pablo Light 375ml",cat:"Groceries",unit:"pc",cost:0,price:500,reo:0,start:0,keys:"pablo, alak",photo:""},
+  {code:"FUND",name:"Fundador Super Special",cat:"Groceries",unit:"pc",cost:0,price:450,reo:0,start:0,keys:"fundador, alak",photo:""},
+  {code:"ALF-L",name:"Alfonso I Light 1L",cat:"Groceries",unit:"pc",cost:0,price:380,reo:0,start:0,keys:"alfonso, light, alak",photo:""},
+  {code:"GINEBRA",name:"Ginebra San Miguel 350ml",cat:"Groceries",unit:"pc",cost:0,price:70,reo:0,start:0,keys:"ginebra, gsm, alak",photo:""},
+  {code:"FIESTA",name:"Del Monte Fiesta cocktail",cat:"Groceries",unit:"pc",cost:0,price:85,reo:0,start:0,keys:"fiesta, fruit cocktail",photo:""},
+  {code:"TODAYS",name:"Today's Mixed Fruits",cat:"Groceries",unit:"pc",cost:0,price:90,reo:0,start:0,keys:"todays, fruit salad",photo:""},
+  {code:"DM-CORN",name:"Del Monte cream style corn",cat:"Groceries",unit:"pc",cost:0,price:45,reo:0,start:0,keys:"del monte, corn, mais",photo:""},
+  {code:"UFC-CORN",name:"UFC whole corn kernels",cat:"Groceries",unit:"pc",cost:0,price:45,reo:0,start:0,keys:"ufc, corn, mais",photo:""},
+  {code:"MUSH",name:"Best Home whole mushrooms",cat:"Groceries",unit:"pc",cost:0,price:40,reo:0,start:0,keys:"mushroom, kabute",photo:""},
+  {code:"UFC-PEA",name:"UFC green peas",cat:"Groceries",unit:"pc",cost:0,price:35,reo:0,start:0,keys:"ufc, peas, gisantes",photo:""},
+  {code:"NATA",name:"Tita nata de coco",cat:"Groceries",unit:"pc",cost:0,price:55,reo:0,start:0,keys:"nata",photo:""},
+  {code:"KAONG",name:"CDO kaong white",cat:"Groceries",unit:"pc",cost:0,price:55,reo:0,start:0,keys:"kaong",photo:""},
+  {code:"DM-CHK",name:"Del Monte pineapple chunks",cat:"Groceries",unit:"pc",cost:0,price:40,reo:0,start:0,keys:"pineapple chunks, pinya",photo:""},
+  {code:"DM-CRU",name:"Del Monte pineapple crushed",cat:"Groceries",unit:"pc",cost:0,price:40,reo:0,start:0,keys:"pineapple crushed, pinya",photo:""},
+  {code:"DM-SLI",name:"Del Monte pineapple slices",cat:"Groceries",unit:"pc",cost:0,price:40,reo:0,start:0,keys:"pineapple slices, pinya",photo:""},
+  {code:"ARG-LOAF",name:"Argentina meat loaf",cat:"Groceries",unit:"pc",cost:0,price:38,reo:0,start:0,keys:"argentina, loaf",photo:""},
+  {code:"ARG-SAU",name:"Argentina fiesta sausage",cat:"Groceries",unit:"pc",cost:0,price:33,reo:0,start:0,keys:"argentina, sausage",photo:""},
+  {code:"ARG-GIN",name:"Argentina giniling",cat:"Groceries",unit:"pc",cost:0,price:32,reo:0,start:0,keys:"argentina, giniling",photo:""},
+  {code:"CDO-KN",name:"CDO Karne Norte",cat:"Groceries",unit:"pc",cost:0,price:38,reo:0,start:0,keys:"karne norte",photo:""},
+  {code:"FRESCA",name:"Fresca tuna 175g",cat:"Groceries",unit:"pc",cost:0,price:28,reo:0,start:0,keys:"fresca, tuna",photo:""},
+  {code:"TIGA",name:"TigaBunga squid in ink",cat:"Groceries",unit:"pc",cost:0,price:35,reo:0,start:0,keys:"squid, tigabunga, pusit",photo:""},
+  {code:"UNIPAK",name:"Uni-Pak mackerel",cat:"Groceries",unit:"pc",cost:0,price:40,reo:0,start:0,keys:"unipak, mackerel",photo:""},
+  {code:"HOKK",name:"Hokkaido mackerel",cat:"Groceries",unit:"pc",cost:0,price:45,reo:0,start:0,keys:"hokkaido, mackerel",photo:""},
+  {code:"YT-CB",name:"Young's Town corned beef",cat:"Groceries",unit:"pc",cost:0,price:45,reo:0,start:0,keys:"youngs town, corned, karne",photo:""},
+  {code:"YT-SAR",name:"Young's Town sardines tomato",cat:"Groceries",unit:"pc",cost:0,price:28,reo:0,start:0,keys:"sardines, youngs, sardinas",photo:""},
+  {code:"YT-HOT",name:"Young's Town sardines hot",cat:"Groceries",unit:"pc",cost:0,price:28,reo:0,start:0,keys:"sardines, spicy, sardinas",photo:""},
+  {code:"SM-CHILI",name:"San Marino chili corned tuna",cat:"Groceries",unit:"pc",cost:0,price:42,reo:0,start:0,keys:"san marino, chili, tuna",photo:""},
+  {code:"SM-CORN",name:"San Marino corned tuna",cat:"Groceries",unit:"pc",cost:0,price:42,reo:0,start:0,keys:"san marino, tuna",photo:""},
+  {code:"CENT",name:"Century tuna flakes in oil",cat:"Groceries",unit:"pc",cost:0,price:38,reo:0,start:0,keys:"century tuna",photo:""},
+  {code:"MALING",name:"Maling luncheon meat",cat:"Groceries",unit:"pc",cost:0,price:55,reo:0,start:0,keys:"maling",photo:""},
+  {code:"KNORR",name:"Knorr sinigang sampalok",cat:"Groceries",unit:"pc",cost:0,price:12,reo:0,start:0,keys:"knorr, sinigang",photo:""},
+  {code:"MAGIC",name:"Maggi Magic Sarap",cat:"Groceries",unit:"pc",cost:0,price:8,reo:0,start:0,keys:"magic sarap",photo:""},
+  {code:"SWAN-1L",name:"Silver Swan soy 1L",cat:"Groceries",unit:"pc",cost:0,price:45,reo:0,start:0,keys:"silver swan, toyo",photo:""},
+  {code:"SWAN-4L",name:"Silver Swan soy 3.785L",cat:"Groceries",unit:"pc",cost:0,price:140,reo:0,start:0,keys:"silver swan, gallon, toyo",photo:""},
+  {code:"SWAN-200",name:"Silver Swan soy 200ml pouch",cat:"Groceries",unit:"pc",cost:0,price:12,reo:0,start:0,keys:"silver swan, 200, toyo",photo:""},
+  {code:"SWAN-PET",name:"Silver Swan soy PET small",cat:"Groceries",unit:"pc",cost:0,price:25,reo:0,start:0,keys:"silver swan bottle, toyo",photo:""},
+  {code:"DP-VIN1",name:"Datu Puti vinegar 1L",cat:"Groceries",unit:"pc",cost:0,price:35,reo:0,start:0,keys:"datu puti, suka",photo:""},
+  {code:"DP-SOY1",name:"Datu Puti soy 1L",cat:"Groceries",unit:"pc",cost:0,price:45,reo:0,start:0,keys:"datu puti, toyo",photo:""},
+  {code:"DP-SOY2",name:"Datu Puti soy 200ml pouch",cat:"Groceries",unit:"pc",cost:0,price:12,reo:0,start:0,keys:"datu puti, 200, toyo",photo:""},
+  {code:"DP-VIN2",name:"Datu Puti vinegar 200ml",cat:"Groceries",unit:"pc",cost:0,price:9,reo:0,start:0,keys:"suka 200, datu puti",photo:""},
+  {code:"DP-PET",name:"Datu Puti soy PET small",cat:"Groceries",unit:"pc",cost:0,price:26,reo:0,start:0,keys:"datu puti bottle, toyo",photo:""},
+  {code:"LORINS",name:"Lorins patis pouch",cat:"Groceries",unit:"pc",cost:0,price:20,reo:0,start:0,keys:"lorins, patis",photo:""},
+  {code:"PALM-1.5",name:"Unicorn Palm Olein 1.5L",cat:"Groceries",unit:"pc",cost:0,price:95,reo:0,start:0,keys:"oil, palm, unicorn, mantika",photo:""},
+  {code:"UFC-KET",name:"UFC Tamis Anghang banana catsup bottle",cat:"Groceries",unit:"pc",cost:0,price:28,reo:0,start:0,keys:"ufc, catsup, sarsa",photo:""},
+  {code:"PAPA-KET",name:"Papa banana ketchup bottle",cat:"Groceries",unit:"pc",cost:0,price:28,reo:0,start:0,keys:"papa, ketchup, sarsa",photo:""},
+  {code:"MT-SAR",name:"Mang Tomas All-Around Sarsa bottle",cat:"Groceries",unit:"pc",cost:0,price:35,reo:0,start:0,keys:"mang tomas, sarsa",photo:""},
+  {code:"DM-ORG",name:"Del Monte Original tomato sauce pouch",cat:"Groceries",unit:"pc",cost:0,price:22,reo:0,start:0,keys:"tomato sauce",photo:""},
+  {code:"DM-FIL",name:"Del Monte Filipino tomato sauce pouch",cat:"Groceries",unit:"pc",cost:0,price:25,reo:0,start:0,keys:"tomato sauce, filipino",photo:""},
+  {code:"PAPA-P",name:"Papa banana ketchup pouch 100g",cat:"Groceries",unit:"pc",cost:0,price:13,reo:0,start:0,keys:"papa pouch, ketchup",photo:""},
+  {code:"UFC-P",name:"UFC Tamis Anghang pouch 100g",cat:"Groceries",unit:"pc",cost:0,price:14,reo:0,start:0,keys:"ufc pouch, catsup",photo:""},
+  {code:"MT-P",name:"Mang Tomas sarsa pouch 100g",cat:"Groceries",unit:"pc",cost:0,price:14,reo:0,start:0,keys:"mang tomas pouch, sarsa",photo:""},
+  {code:"DM-CHILI",name:"Del Monte sweet chili sauce",cat:"Groceries",unit:"pc",cost:0,price:35,reo:0,start:0,keys:"sweet chili",photo:""},
+  {code:"UFC-CHILI",name:"UFC sweet chili sauce",cat:"Groceries",unit:"pc",cost:0,price:32,reo:0,start:0,keys:"ufc chili",photo:""},
+  {code:"ALA-EVA",name:"Alaska Evaporada",cat:"Groceries",unit:"pc",cost:0,price:28,reo:0,start:0,keys:"evaporada, alaska",photo:""},
+  {code:"ALA-CLA",name:"Alaska Classic condensed",cat:"Groceries",unit:"pc",cost:0,price:13,reo:0,start:0,keys:"alaska classic, condensada",photo:""},
+  {code:"ALA-CON",name:"Alaska Condensada",cat:"Groceries",unit:"pc",cost:0,price:41,reo:0,start:0,keys:"condensada, alaska",photo:""},
+  {code:"COWBELL",name:"Cow Bell condensada",cat:"Groceries",unit:"pc",cost:0,price:39,reo:0,start:0,keys:"cowbell, condensada",photo:""},
+  {code:"COWB-S",name:"Cow Bell Condensada small",cat:"Groceries",unit:"pc",cost:0,price:28,reo:0,start:0,keys:"cowbell small, condensada",photo:""},
+  {code:"COWB-L",name:"Cow Bell Condensarap big",cat:"Groceries",unit:"pc",cost:0,price:55,reo:0,start:0,keys:"cowbell, condensarap",photo:""}
 ];
+const GROC_REFRESH = new Set(["YUM-HD","YUM-TO","CHUMZ","FISHCK","BAWANG","ALI-SW","ALI-BBQ","MUNCH-R","MUNCH-G","BANGUS","STAR-M","RENO","LC-HAM","LC-CHK","LC-TUN","LC-BAC","ALASKA-S","BEAR-S","NES-CW","NES-ORG","NES-40","KOP-BR","KOP-BL","KOP-BK","GT-W","GT-CH","GT-PREM","GT-GRAN","CM-150","CM-220","OATS-WG","OATS-QC","EDEN","CREAM-N","BEAR-P","ALA-300","ALA-840","KT-400","KT-220","KT-150","BONNA","BONAKID","NIDO","CAL-1KG","CAL-BOX","CORN-R","CORN-GH","SODA","SOJU","PABLO","FUND","ALF-L","GINEBRA","FIESTA","TODAYS","DM-CORN","UFC-CORN","MUSH","UFC-PEA","NATA","KAONG","DM-CHK","DM-CRU","DM-SLI","ARG-LOAF","ARG-SAU","ARG-GIN","CDO-KN","FRESCA","TIGA","UNIPAK","HOKK","YT-CB","YT-SAR","YT-HOT","SM-CHILI","SM-CORN","CENT","MALING","KNORR","MAGIC","SWAN-1L","SWAN-4L","SWAN-200","SWAN-PET","DP-VIN1","DP-SOY1","DP-SOY2","DP-VIN2","DP-PET","LORINS","PALM-1.5","UFC-KET","PAPA-KET","MT-SAR","DM-ORG","DM-FIL","PAPA-P","UFC-P","MT-P","DM-CHILI","UFC-CHILI","ALA-EVA","ALA-CLA","ALA-CON","COWBELL","COWB-S","COWB-L"]);
 
 const $ = id => document.getElementById(id);
 let audioCtx = null;
@@ -432,7 +541,17 @@ function load() {
   STORES.forEach(s => {
     if (!d.stores[s.id]) d.stores[s.id] = blankStore(s.name);
     seedFor(s.name).forEach(item => {
-      if (!d.stores[s.id].catalog.find(c=>c.code===item.code)) d.stores[s.id].catalog.push(item);
+      const book = d.stores[s.id];
+      const hits = [];
+      book.catalog.forEach((c,i) => { if (c.code===item.code) hits.push(i); });
+      if (!hits.length) { book.catalog.push(item); return; }
+      if (s.id==="groc" && GROC_REFRESH.has(item.code)) {
+        const keep = book.catalog[hits[0]];
+        keep.name = item.name;
+        keep.keys = item.keys;
+        keep.price = item.price;
+        for (let i = hits.length - 1; i >= 1; i--) book.catalog.splice(hits[i], 1);
+      }
     });
   });
   if (!d.staff || (d.staff.length===2 && d.staff[0].name==="Nanay" && d.staff[1].name==="JC")) {
