@@ -124,6 +124,11 @@ th { text-align:left; background:var(--g2); color:#fff; padding:10px; font-size:
 td { padding:10px; border-bottom:1px solid #eee; }
 .cat-list { max-height:320px; overflow:auto; -webkit-overflow-scrolling:touch; }
 #catTable tr.pick { background:var(--ylw); }
+#salesTable tr.sale-row { cursor:pointer; }
+#salesTable tr.sale-row:active { background:var(--ylw); }
+.refund-line { display:grid; grid-template-columns:44px 1fr 110px; gap:8px; align-items:center; padding:10px 0; border-bottom:1px solid #eee; }
+.refund-line input[type=checkbox] { width:28px; min-height:28px; margin:0 auto; }
+.refund-line input[type=number] { min-height:48px; font-size:20px; text-align:center; padding:8px; }
 #rCashierName { font-size:22px; }
 #lock {
   display:none; position:fixed; inset:0; background:rgba(27,77,62,.94); z-index:80;
@@ -404,8 +409,22 @@ body.tutor-cat .cat-list { max-height:120px; }
 </section>
 
 <section class="page" id="sales">
+  <div class="card" id="refundCard" style="display:none">
+    <p><b id="refundTitle">Refund</b></p>
+    <p class="muted" id="refundMeta"></p>
+    <div id="refundLines"></div>
+    <div id="refundPayWrap">
+      <label>Refund payment</label>
+      <select id="refundPay" class="ylw"><option>Cash</option><option>GCash</option><option>Other</option></select>
+    </div>
+    <button class="btn btn-r" id="refundGo" type="button" style="margin-top:10px">Refund selected</button>
+    <button class="btn btn-ghost" id="refundCancel" type="button" style="margin-top:8px">Cancel</button>
+    <p class="muted" id="refundMsg"></p>
+  </div>
   <div class="card">
-    <p class="muted">One row per line. Do not edit posted rows — add a correction sale if needed.</p>
+    <label>Category</label>
+    <div class="chips" id="salesStoreChips"></div>
+    <p class="muted" id="salesNote">Tap a receipt. Check the items to give back, then Refund selected. The original sale stays.</p>
     <div class="card" style="overflow:auto;max-height:70vh"><table id="salesTable"></table></div>
   </div>
 </section>
@@ -1192,11 +1211,153 @@ function renderStock() {
   }).join("") || "<p class='muted'>No items.</p>";
 }
 function renderSales() {
-  const rows = [...st().sales].reverse().slice(0,200);
-  $("salesTable").innerHTML = "<tr><th>#</th><th>Date</th><th>Who</th><th>Item</th><th>Qty</th><th>Total</th><th>Pay</th></tr>" +
-    rows.map(s=>`<tr><td>${s.receipt}</td><td>${s.date} ${s.time||""}</td><td>${s.cashier||""}</td><td>${s.code}<div class="muted">${s.name}</div></td>
-      <td>${s.qty}${s.unit==="L"?" L":""}</td><td>${peso(s.line)}</td><td>${s.payment}</td></tr>`).join("");
+  fillStoreChips($("salesStoreChips"));
+  ensureLineIds();
+  const here = new Set((st().sales||[]).map(s => Number(s.receipt)));
+  const all = [];
+  STORES.forEach(s => (DB.stores[s.id].sales||[]).forEach(line => all.push({...line, store:s.id})));
+  const byRcpt = new Map();
+  all.forEach(line => {
+    const n = Number(line.receipt);
+    if (!here.has(n)) return;
+    if (!byRcpt.has(n)) byRcpt.set(n, []);
+    byRcpt.get(n).push(line);
+  });
+  const groups = [...byRcpt.entries()].map(([rcpt, lines]) => {
+    const when = lines.map(l => (l.date||"")+" "+(l.time||"")).sort().pop();
+    const total = lines.reduce((a,l)=>a+(Number(l.line)||0), 0);
+    const refund = lines.every(l => l.refund || Number(l.qty)<0);
+    const of = (lines.find(l => l.refundReceipt)||{}).refundReceipt;
+    return { rcpt, lines, when, total, refund, of, cashier: lines[0].cashier||"", payment: lines[0].payment||"" };
+  }).sort((a,b) => String(b.when).localeCompare(String(a.when)) || b.rcpt-a.rcpt).slice(0, 80);
+  if (!groups.length) {
+    $("salesTable").innerHTML = "<tr><td class='muted'>No sales in this category yet.</td></tr>";
+    return;
+  }
+  $("salesTable").innerHTML = "<tr><th>#</th><th>Date</th><th>Items</th><th>Total</th><th>Pay</th></tr>" +
+    groups.map(g => {
+      const names = g.lines.slice(0, 2).map(l => esc(l.name)).join(", ");
+      const more = g.lines.length>2 ? " +"+(g.lines.length-2) : "";
+      const tag = g.refund ? "<div class='muted'>Refund of #"+esc(g.of)+"</div>" : "";
+      const mix = new Set(g.lines.map(l => l.store)).size>1 ? "<div class='muted'>Mixed sale</div>" : "";
+      return `<tr class="sale-row" data-rcpt="${g.rcpt}"><td><b>${g.rcpt}</b>${tag}</td><td>${esc(g.when)}<div class="muted">${esc(g.cashier)}</div></td>
+        <td>${names}${more}${mix}</td><td style="color:${g.total<0?'var(--red)':'inherit'}"><b>${peso(g.total)}</b></td><td>${esc(g.payment)}</td></tr>`;
+    }).join("");
+  $("salesTable").querySelectorAll(".sale-row").forEach(tr => tr.onclick = () => openRefund(tr.dataset.rcpt));
 }
+function ensureLineIds() {
+  let changed = false;
+  STORES.forEach(s => (DB.stores[s.id].sales||[]).forEach((line, i) => {
+    if (!line.id) { line.id = s+"-"+i+"-"+line.receipt+"-"+line.code; changed = true; }
+  }));
+  if (changed) save();
+}
+function linesForReceipt(rcpt) {
+  const n = Number(rcpt);
+  const out = [];
+  STORES.forEach(s => (DB.stores[s.id].sales||[]).forEach(line => {
+    if (Number(line.receipt)===n) out.push({...line, store:s.id});
+  }));
+  return out;
+}
+function refundedQty(lineId) {
+  let n = 0;
+  STORES.forEach(s => (DB.stores[s.id].sales||[]).forEach(line => {
+    if (line.refundOf===lineId) n += Math.abs(Number(line.qty)||0);
+  }));
+  return n;
+}
+function qtyLeft(line) {
+  const sold = Math.abs(Number(line.qty)||0);
+  const left = sold - refundedQty(line.id);
+  return line.unit==="L" ? Math.round(left*100)/100 : Math.round(left*1000)/1000;
+}
+function findSaleLine(id) {
+  for (const s of STORES) {
+    const line = (DB.stores[s.id].sales||[]).find(x => x.id===id);
+    if (line) return { line, store:s.id };
+  }
+  return null;
+}
+let refundRcpt = null;
+function openRefund(rcpt) {
+  ensureLineIds();
+  refundRcpt = Number(rcpt);
+  const lines = linesForReceipt(refundRcpt);
+  if (!lines.length) return;
+  const originals = lines.filter(l => !l.refund && Number(l.qty)>0);
+  const refundOnly = !originals.length;
+  const sample = lines[0];
+  $("refundTitle").textContent = refundOnly ? "Refund #"+refundRcpt : "Refund resibo #"+refundRcpt;
+  $("refundMeta").textContent = (sample.date||"")+" "+(sample.time||"")+" · "+(sample.cashier||"")+(sample.refundReceipt ? " · from #"+sample.refundReceipt : "");
+  $("refundPay").value = ["Cash","GCash","Other"].includes(sample.payment) ? sample.payment : "Cash";
+  $("refundMsg").textContent = "";
+  $("refundGo").style.display = refundOnly ? "none" : "block";
+  $("refundPayWrap").style.display = refundOnly ? "none" : "block";
+  $("refundLines").innerHTML = (refundOnly ? lines : originals).map(l => {
+    const left = qtyLeft(l);
+    const fuel = l.unit==="L";
+    const qtyTxt = fuel ? Number(l.qty).toLocaleString("en-PH",{maximumFractionDigits:2})+" L" : "×"+l.qty;
+    if (refundOnly || left<=0) {
+      return `<div class="refund-line"><span></span><div><b>${esc(l.name)}</b><div class="muted">${esc(l.code)} · ${esc(storeName(l.store))} · ${qtyTxt}${left<=0&&!refundOnly?" · refunded":""}</div></div><b>${peso(l.line)}</b></div>`;
+    }
+    return `<div class="refund-line" data-id="${esc(l.id)}" data-store="${esc(l.store)}" data-max="${left}" data-fuel="${fuel?"1":"0"}">
+      <input type="checkbox" class="refund-pick" checked aria-label="Refund ${esc(l.name)}">
+      <div><b>${esc(l.name)}</b><div class="muted">${esc(l.code)} · ${esc(storeName(l.store))} · ${peso(l.unitPrice)}${fuel?"/L":""} · left ${fuel?left+" L":left}</div></div>
+      <input class="refund-qty ylw" type="number" inputmode="${fuel?"decimal":"numeric"}" min="${fuel?"0.01":"1"}" max="${left}" step="${fuel?"0.01":"1"}" value="${left}" aria-label="Refund qty">
+    </div>`;
+  }).join("") || "<p class='muted'>Nothing left to refund.</p>";
+  $("refundCard").style.display = "block";
+  $("refundCard").scrollIntoView({block:"start"});
+}
+function postRefund() {
+  if (!DB.session) { sndErr(); showLock(true); alert("Enter staff PIN first."); return; }
+  const picks = [];
+  let bad = false;
+  $("refundLines").querySelectorAll(".refund-line[data-id]").forEach(row => {
+    const box = row.querySelector(".refund-pick");
+    if (!box || !box.checked) return;
+    const fuel = row.dataset.fuel==="1";
+    const raw = Number(row.querySelector(".refund-qty").value);
+    const qty = fuel ? Math.round(raw*100)/100 : Math.round(raw);
+    const max = Number(row.dataset.max);
+    if (!(qty>0) || qty>max+0.001) { bad = true; return; }
+    picks.push({ id: row.dataset.id, store: row.dataset.store, qty });
+  });
+  if (bad) { sndErr(); alert("Enter a quantity that is still on the receipt."); return; }
+  if (!picks.length) { sndErr(); alert("Select an item to refund."); return; }
+  let total = 0;
+  for (const p of picks) {
+    const hit = findSaleLine(p.id);
+    if (!hit || p.qty>qtyLeft(hit.line)+0.001) { sndErr(); alert("That item was already refunded."); openRefund(refundRcpt); return; }
+    total += p.qty * Number(hit.line.unitPrice);
+  }
+  if (!confirm("Refund "+peso(total)+" from resibo #"+refundRcpt+"? The original sale stays.")) return;
+  const rcpt = Number(DB.nextRcpt)||1001;
+  const pay = $("refundPay").value;
+  picks.forEach((p, i) => {
+    const hit = findSaleLine(p.id);
+    const price = Number(hit.line.unitPrice);
+    const sid = hit.store;
+    DB.stores[sid].sales.push({
+      receipt: rcpt, date: today(), time: nowT(), cashier: DB.session, payment: pay,
+      tendered: 0, change: 0, refund: true, refundReceipt: Number(refundRcpt), refundOf: p.id,
+      code: hit.line.code, name: hit.line.name, cat: hit.line.cat,
+      qty: -p.qty, unit: hit.line.unit||"", unitPrice: price, line: Math.round(-price*p.qty*100)/100,
+      id: Date.now()+"-rf-"+i+"-"+p.id
+    });
+  });
+  DB.nextRcpt = rcpt+1;
+  STORES.forEach(s => { DB.stores[s.id].settings.nextRcpt = DB.nextRcpt; });
+  if ($("rRcpt")) $("rRcpt").value = DB.nextRcpt;
+  save();
+  renderAll();
+  openRefund(refundRcpt);
+  $("refundMsg").textContent = "Refunded "+peso(total)+" · new resibo #"+rcpt+".";
+  sndOk();
+}
+$("refundCancel").onclick = () => { refundRcpt = null; $("refundCard").style.display = "none"; $("refundMsg").textContent = ""; };
+$("refundGo").onclick = postRefund;
 function storeName(id) {
   return (STORES.find(x=>x.id===id)||{}).name || id;
 }
@@ -1518,6 +1679,7 @@ const FAQ = {
     {q:"What is sukli?", a:"Sukli is the change. Enter the cash they handed you under Bayad / Tendered, then tap SAVE SALE."},
     {q:"How do I switch cashier?", a:"Tap Switch, choose the name, enter that person’s PIN, then Open register."},
     {q:"Where is the daily report?", a:"Open Close. Pick the store and the dates. Enter the opening float and the counted cash. Download this store, or all 3 stores."},
+    {q:"How do I refund?", a:"Open Sales, tap the receipt, and check the items to give back. Set how many, then Refund selected. The original sale stays. Stock comes back, and the day’s total goes down."},
     {q:"How do I back up?", a:"Open Backup, then Export. Keep that file. Import on this iPad brings the books back. This includes sales, catalog, and staff."},
     {q:"The screen looks old.", a:"Close the site completely, then open it again. The register updates when it is opened fresh."},
     {q:"The sound is too loud.", a:"Open Backup and uncheck Sound. The taps and the save beep stop."}
@@ -1530,6 +1692,7 @@ const FAQ = {
     {q:"Ano ang sukli?", a:"Ang sukli ay ang change. Ilagay ang perang tinanggap sa Bayad / Tendered, tapos SAVE SALE."},
     {q:"Paano magpalit ng cashier?", a:"Pindutin ang Switch, piliin ang pangalan, ilagay ang PIN niya, tapos Open register."},
     {q:"Saan ang ulat ng araw?", a:"Buksan ang Close. Piliin ang store at ang petsa. Ilagay ang opening float at ang bilang ng cash. I-download ang store na ito, o ang tatlo."},
+    {q:"Paano mag-refund?", a:"Buksan ang Sales, pindutin ang resibo, at i-check ang ibabalik. Ilagay ang dami, tapos Refund selected. Nanatili ang orihinal na benta. Bumabalik ang stock, at bumababa ang total ng araw."},
     {q:"Paano mag-backup?", a:"Buksan ang Backup, tapos Export. Itago ang file. Ang Import sa iPad na ito ang nagbabalik ng mga libro. Kasama ang benta, catalog, at staff."},
     {q:"Luma ang nakikita sa screen.", a:"Isara nang tuluyan ang site, tapos buksan muli. Nag-u-update ang register kapag binuksan nang bago."},
     {q:"Malakas ang tunog.", a:"Buksan ang Backup at alisin ang check sa Sound. Titigil ang beep sa tap at sa save."}
@@ -1542,6 +1705,7 @@ const FAQ = {
     {q:"Ania ti sukli?", a:"Ti sukli ket ti sinsukli. Iserrek ti kuarta a naawat iti Bayad / Tendered, kalpasanna SAVE SALE."},
     {q:"Kasano ti agsukat ti cashier?", a:"Pinduten ti Switch, pilien ti nagan, iserrek ti PIN na, kalpasanna Open register."},
     {q:"Ayanna ti report ti aldaw?", a:"Luktan ti Close. Pilien ti store ken ti petsa. Iserrek ti opening float ken ti naibilang a cash. I-download daytoy a store, wenno ti tallo."},
+    {q:"Kasano ti ag-refund?", a:"Luktan ti Sales, pinduten ti resibo, ken i-check dagiti isubli. Ikabil ti kaadu, kalpasanna Refund selected. Agtalinaed ti orihinal a benta. Agsubli ti stock, ken bumaba ti total ti aldaw."},
     {q:"Kasano ti ag-backup?", a:"Luktan ti Backup, kalpasanna Export. Idulin ti file. Ti Import iti daytoy nga iPad ti mangisubli kadagiti libro. Mairaman ti benta, catalog, ken staff."},
     {q:"Daan ti makita iti screen.", a:"Irekep a naan-anay ti site, kalpasanna ilukat manen. Ag-update ti register no maluktan a baro."},
     {q:"Natapok ti tunog.", a:"Luktan ti Backup ken ikkaten ti check iti Sound. Isardeng ti beep iti tap ken iti save."}
@@ -1589,9 +1753,9 @@ const GUIDE = [
     tl:["Stock", "Ang green bar ang natitira sa librong ito. Maikli ang bar kapag halos ubos na."],
     il:["Stock", "Ti green bar ti nabati iti daytoy a libro. Ababa ti bar no dandani nga awan."] },
   { page:"sales", scroll:"#sales", sel:["#tabs button[data-p='sales']", "#salesTable"],
-    en:["Sales", "Each posted line is one row. Do not edit it. Add a new sale if you need a correction."],
-    tl:["Sales", "Bawat nai-save na linya ay isang row. Huwag itong baguhin. Magdagdag ng bagong benta kung may ituwid."],
-    il:["Sales", "Tunggal naisurat a linya ket maysa a row. Saan nga baliwan. Inayon ti baro a benta no masapul ti koreksion."] },
+    en:["Sales", "Tap a receipt. Check the items to give back and set the quantity, then Refund selected. The original sale stays."],
+    tl:["Sales", "Pindutin ang resibo. I-check ang ibabalik at ilagay ang dami, tapos Refund selected. Nanatili ang orihinal na benta."],
+    il:["Sales", "Pinduten ti resibo. I-check dagiti isubli ken ikabil ti kaadu, kalpasanna Refund selected. Agtalinaed ti orihinal a benta."] },
   { page:"close", scroll:"top", sel:["#cStoreChips", "#cRangeChips"],
     en:["Close the day", "Pick the store and the dates. Each store has its own report."],
     tl:["Isara ang araw", "Piliin ang store at ang petsa. May sariling ulat ang bawat store."],
