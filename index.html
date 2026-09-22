@@ -88,9 +88,12 @@ input.ylw, select.ylw { background:var(--ylw); }
 .warn { color:var(--red); font-weight:700; font-size:18px; }
 .ok { color:var(--ok); font-weight:700; }
 .low { background:#F8D7DA; color:var(--red); font-weight:700; padding:4px 8px; border-radius:8px; font-size:14px; }
-.hit { display:flex; gap:14px; align-items:center; width:100%; text-align:left; padding:14px; margin:8px 0; border:0; border-radius:14px; background:var(--cream); font-size:20px; min-height:72px; }
+.hit { display:flex; gap:14px; align-items:center; width:auto; flex:1; text-align:left; padding:14px; margin:0; border:0; border-radius:14px; background:var(--cream); font-size:20px; min-height:72px; min-width:0; }
 .hit b { display:block; font-size:22px; }
 .hit img, .thumb { width:72px; height:72px; object-fit:cover; border-radius:10px; background:#ddd; flex-shrink:0; }
+.hit-row { display:flex; gap:8px; align-items:center; margin:8px 0; }
+input.hit-qty { width:84px; flex:0 0 84px; min-height:72px; text-align:center; padding:8px; font-size:22px; }
+.hit-add { width:84px; flex:0 0 84px; min-height:72px; padding:8px 6px; font-size:18px; }
 .chips { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
 .chips button { border:0; background:var(--g2); color:#fff; padding:12px 16px; border-radius:10px; font-size:16px; font-weight:700; min-height:44px; }
 .barrow { display:grid; grid-template-columns:110px 1fr 90px; gap:8px; align-items:center; margin:8px 0; font-size:16px; }
@@ -149,14 +152,7 @@ td { padding:10px; border-bottom:1px solid #eee; }
         <input id="rSearch" class="ylw" placeholder="yum  ·  sinigang  ·  toyo  ·  oil" autocomplete="off">
       </div>
       <div class="chips" id="catChips"></div>
-      <p class="muted">Tap a category. One sale can mix all three. Reports stay separate.</p>
-      <div class="qty-row">
-        <div class="field">
-          <label id="qtyLbl">Dami / Qty</label>
-          <input id="rQty" class="ylw" type="number" min="1" step="1" value="1">
-        </div>
-        <button class="btn btn-g" id="addBtn">Add item</button>
-      </div>
+      <p class="muted">Tap a category. Set the quantity beside the item, then tap Add.</p>
       <div id="hits"></div>
       <div id="cart"></div>
     </div>
@@ -717,32 +713,51 @@ function searchItems(q) {
 }
 let picked = null;
 function isFuel(it) { return !!(it && (it.unit==="L" || it.store==="gas")); }
-function setQtyMode(it) {
+function addLine(it, qty) {
   const fuel = isFuel(it);
-  $("qtyLbl").textContent = fuel ? "Liters / Litro" : "Dami / Qty";
-  $("rQty").step = fuel ? "0.01" : "1";
-  $("rQty").min = fuel ? "0.01" : "1";
+  qty = fuel ? Math.round(Number(qty)*100)/100 : Math.round(Number(qty));
+  if (!it || qty<=0) { sndErr(); alert("Enter a quantity / dami."); return false; }
+  if (!fuel && it.cat!=="Load" && it.cat!=="Empties" && onHand(it)<qty)
+    if (!confirm(it.code+" on hand "+onHand(it)+". Sell anyway?")) return false;
+  const exist = DB.cart.find(l => l.code===it.code && l.store===it.store);
+  if (exist) exist.qty = fuel ? Math.round((exist.qty+qty)*100)/100 : exist.qty+qty;
+  else DB.cart.push({code:it.code,name:it.name,cat:it.cat,store:it.store,unit:fuel?"L":(it.unit||"pc"),price:Number(it.price),qty});
+  save(); renderCart();
+  sndAdd();
+  return true;
 }
 function renderHits() {
   const q = $("rSearch").value;
   const hits = searchItems(q);
   if (!hits.length) {
     $("hits").innerHTML = '<p class="warn">Walang tama. Type coke, lucky, yosi, load — or add the item in Catalog.</p>';
-    picked = null; setQtyMode(null); return;
+    picked = null; return;
   }
   if (!picked || !hits.find(h => h.code===picked.code && h.store===picked.store)) picked = hits[0];
-  setQtyMode(picked);
-  $("hits").innerHTML = hits.map(h =>
-    `<button class="hit" data-code="${h.code}" data-store="${h.store}" style="${h.code===picked.code&&h.store===picked.store?'background:#C9A227':''}">
-      ${h.photo?`<img src="${h.photo}" alt="">`:""}
-      <div><b>${h.name}</b>
-      <span class="muted">${peso(h.price)}${isFuel(h)?" / L":""} · ${h.cat}</span></div>
-    </button>`
-  ).join("");
-  $("hits").querySelectorAll(".hit").forEach(b => b.onclick = () => {
-    picked = findItem(b.dataset.code, b.dataset.store);
-    sndTap();
-    renderHits();
+  $("hits").innerHTML = hits.map(h => {
+    const fuel = isFuel(h);
+    return `<div class="hit-row" data-code="${esc(h.code)}" data-store="${esc(h.store)}">
+      <button type="button" class="hit" style="${h.code===picked.code&&h.store===picked.store?'background:#C9A227':''}">
+        ${h.photo?`<img src="${h.photo}" alt="">`:""}
+        <div><b>${esc(h.name)}</b>
+        <span class="muted">${peso(h.price)}${fuel?" / L":""} · ${esc(h.cat)}</span></div>
+      </button>
+      <input class="hit-qty ylw" type="number" inputmode="${fuel?"decimal":"numeric"}" min="${fuel?"0.01":"1"}" step="${fuel?"0.01":"1"}" value="1" aria-label="${fuel?"Liters":"Qty"}">
+      <button type="button" class="btn btn-g hit-add">${fuel?"Add L":"Add"}</button>
+    </div>`;
+  }).join("");
+  $("hits").querySelectorAll(".hit-row").forEach(row => {
+    const it = () => findItem(row.dataset.code, row.dataset.store);
+    row.querySelector(".hit").onclick = () => {
+      picked = it();
+      sndTap();
+      $("hits").querySelectorAll(".hit").forEach(b => { b.style.background = ""; });
+      row.querySelector(".hit").style.background = "#C9A227";
+    };
+    row.querySelector(".hit-add").onclick = () => {
+      const box = row.querySelector(".hit-qty");
+      if (addLine(it(), box.value)) box.value = 1;
+    };
   });
 }
 function fillChips() {
@@ -779,21 +794,6 @@ function renderCart() {
 }
 
 $("rSearch").addEventListener("input", renderHits);
-
-$("addBtn").onclick = () => {
-  const it = picked || searchItems($("rSearch").value)[0];
-  const fuel = isFuel(it);
-  let qty = Number($("rQty").value||0);
-  qty = fuel ? Math.round(qty*100)/100 : Math.round(qty);
-  if (!it || qty<=0) { sndErr(); alert("Code not found / walang code. Add it on Catalog first."); return; }
-  if (!fuel && it.cat!=="Load" && it.cat!=="Empties" && onHand(it)<qty)
-    if (!confirm(it.code+" on hand "+onHand(it)+". Sell anyway?")) return;
-  const exist = DB.cart.find(l => l.code===it.code && l.store===it.store);
-  if (exist) exist.qty = fuel ? Math.round((exist.qty+qty)*100)/100 : exist.qty+qty;
-  else DB.cart.push({code:it.code,name:it.name,cat:it.cat,store:it.store,unit:fuel?"L":(it.unit||"pc"),price:Number(it.price),qty});
-  $("rSearch").value=""; $("rQty").value=1; save(); renderCart();
-  sndAdd();
-};
 
 $("rTend").oninput = renderCart;
 
