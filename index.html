@@ -341,12 +341,8 @@ td { padding:10px; border-bottom:1px solid #eee; }
 
 <script>
 const SEED = [
-  {code:"MRB-RD",name:"Marlboro Red pack",cat:"Gas station",unit:"pack",cost:155,price:185,reo:5,start:20,keys:"marlboro,yosi,cig,red,pack"},
-  {code:"FRT-RD",name:"Fortune Red pack",cat:"Gas station",unit:"pack",cost:95,price:120,reo:5,start:20,keys:"fortune,yosi,cig"},
-  {code:"MTY-RD",name:"Mighty Red pack",cat:"Gas station",unit:"pack",cost:70,price:90,reo:5,start:15,keys:"mighty,yosi,cig"},
-  {code:"OIL2T",name:"2T Motor Oil sachet",cat:"Gas station",unit:"sachet",cost:22,price:35,reo:8,start:20,keys:"oil,2t,motor,gasolina"},
-  {code:"LOAD50",name:"E-Load ₱50",cat:"Gas station",unit:"pc",cost:50,price:50,reo:0,start:0,keys:"load,eload,promo,globe,smart,50"},
-  {code:"LOAD100",name:"E-Load ₱100",cat:"Gas station",unit:"pc",cost:100,price:100,reo:0,start:0,keys:"load,eload,promo,100"},
+  {code:"UNL",name:"Unleaded",cat:"Gas station",unit:"L",cost:0,price:0,reo:0,start:0,keys:"unleaded, gas, gasoline, regular"},
+  {code:"PUNL",name:"Premium unleaded",cat:"Gas station",unit:"L",cost:0,price:0,reo:0,start:0,keys:"premium, unleaded, gas, gasoline"},
   {code:"HOOK6",name:"Fish hook pack #6",cat:"Fishing supplies",unit:"pack",cost:15,price:25,reo:5,start:10,keys:"hook,kawit,fishing,bingwit"},
   {code:"LINE50",name:"Fishing line 50m",cat:"Fishing supplies",unit:"pc",cost:35,price:55,reo:3,start:8,keys:"line,nylon,fishing,pisi"},
   {code:"SINK",name:"Sinker / lead weight",cat:"Fishing supplies",unit:"pc",cost:8,price:15,reo:8,start:20,keys:"sinker,tingga,weight,fishing"},
@@ -553,6 +549,10 @@ function load() {
         for (let i = hits.length - 1; i >= 1; i--) book.catalog.splice(hits[i], 1);
       }
     });
+    if (s.id==="gas") {
+      const fuel = new Set(["UNL","PUNL"]);
+      d.stores.gas.catalog = d.stores.gas.catalog.filter(c => fuel.has(c.code));
+    }
   });
   if (!d.staff || (d.staff.length===2 && d.staff[0].name==="Nanay" && d.staff[1].name==="JC")) {
     d.staff = [{name:"Claire", pin:"0000"}];
