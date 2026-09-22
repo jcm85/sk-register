@@ -99,7 +99,7 @@ input.ylw, select.ylw { background:var(--ylw); }
 table { width:100%; border-collapse:collapse; font-size:16px; }
 th { text-align:left; background:var(--g2); color:#fff; padding:10px; font-size:15px; }
 td { padding:10px; border-bottom:1px solid #eee; }
-#catTable tr[data-code] { cursor:pointer; }
+.cat-list { max-height:320px; overflow:auto; -webkit-overflow-scrolling:touch; }
 #catTable tr.pick { background:var(--ylw); }
 #rCashierName { font-size:22px; }
 #lock {
@@ -218,7 +218,7 @@ td { padding:10px; border-bottom:1px solid #eee; }
     <label>Find item</label>
     <input id="catSearch" class="ylw" placeholder="garlic  ·  soy sauce  ·  coffee" autocomplete="off">
   </div>
-  <div class="card" style="overflow:auto"><table id="catTable"></table></div>
+  <div class="card cat-list"><table id="catTable"></table></div>
   <div class="card" id="itemForm">
     <p class="muted">Fill this in to add an item. To remove one, tap it in the list first.</p>
     <div class="row">
