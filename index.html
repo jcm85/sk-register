@@ -2,12 +2,804 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="0;url=https://effulgent-caramel-6eb31b.netlify.app/">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="S&K">
+<meta name="theme-color" content="#1B4D3E">
 <title>S&K Register</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root {
+  --g:#1B4D3E; --g2:#2E7D4F; --amber:#C9A227; --ylw:#FFF3B0;
+  --cream:#F7F3E8; --ink:#1A1A1A; --muted:#5C5C5C; --red:#B42318;
+  --ok:#0F7B4A; --bg:#f4f1ea; --card:#fff;
+}
+* { box-sizing:border-box; }
+html,body { margin:0; font-family:Arial,system-ui,sans-serif; background:var(--bg); color:var(--ink); }
+body { padding-bottom:80px; font-size:18px; }
+header {
+  background:var(--g); color:#fff; padding:16px 18px 14px;
+  position:sticky; top:0; z-index:20;
+}
+header h1 { margin:0; font-size:22px; font-weight:700; }
+header p { margin:4px 0 0; font-size:14px; opacity:.85; }
+nav {
+  display:flex; gap:8px; overflow-x:auto; padding:10px 12px;
+  background:#fff; border-bottom:1px solid #ddd; position:sticky; top:70px; z-index:19;
+}
+nav button {
+  border:0; background:var(--cream); color:var(--ink); padding:14px 16px;
+  border-radius:10px; font-size:16px; font-weight:700; white-space:nowrap; min-height:48px;
+}
+nav button.on { background:var(--g); color:#fff; }
+.page { display:none; padding:16px; max-width:980px; margin:0 auto; }
+.page.on { display:block; }
+.card { background:var(--card); border-radius:16px; padding:16px; margin-bottom:14px; box-shadow:0 1px 2px rgba(0,0,0,.06); }
+label { display:block; font-size:15px; color:var(--muted); margin:10px 0 6px; font-weight:700; }
+input, select, textarea {
+  width:100%; padding:16px; border:2px solid #ccc; border-radius:12px;
+  font-size:22px; background:#fff; min-height:56px;
+}
+input.ylw { background:var(--ylw); }
+.row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+.btn {
+  border:0; border-radius:14px; padding:18px 16px; font-weight:800; font-size:20px; width:100%;
+  min-height:56px;
+}
+.btn-g { background:var(--g); color:#fff; }
+.btn-a { background:var(--amber); color:#1a1a1a; font-size:22px; min-height:64px; }
+.btn-r { background:var(--red); color:#fff; }
+.btn-ghost { background:#eee; font-size:16px; padding:12px 14px; min-height:44px; }
+.line {
+  display:grid; grid-template-columns:1.1fr .6fr .5fr auto; gap:8px; align-items:center;
+  padding:12px 0; border-bottom:1px solid #eee; font-size:18px;
+}
+.kpi { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.kpi div { background:var(--cream); border-radius:12px; padding:14px; }
+.kpi b { display:block; font-size:26px; }
+.muted { color:var(--muted); font-size:15px; }
+.warn { color:var(--red); font-weight:700; font-size:18px; }
+.ok { color:var(--ok); font-weight:700; }
+.low { background:#F8D7DA; color:var(--red); font-weight:700; padding:4px 8px; border-radius:8px; font-size:14px; }
+.hit { display:flex; gap:14px; align-items:center; width:100%; text-align:left; padding:14px; margin:8px 0; border:0; border-radius:14px; background:var(--cream); font-size:20px; min-height:72px; }
+.hit b { display:block; font-size:22px; }
+.hit img, .thumb { width:72px; height:72px; object-fit:cover; border-radius:10px; background:#ddd; flex-shrink:0; }
+.chips { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
+.chips button { border:0; background:var(--g2); color:#fff; padding:12px 16px; border-radius:10px; font-size:16px; font-weight:700; min-height:44px; }
+table { width:100%; border-collapse:collapse; font-size:16px; }
+th { text-align:left; background:var(--g2); color:#fff; padding:10px; font-size:15px; }
+td { padding:10px; border-bottom:1px solid #eee; }
+.sticky-pay {
+  position:sticky; bottom:0; background:#fff; padding:14px; border-top:3px solid var(--g);
+}
+#subtotal, #change { font-size:28px; }
+#rCashierName { font-size:20px; }
+#lock {
+  display:none; position:fixed; inset:0; background:rgba(27,77,62,.94); z-index:80;
+  color:#fff; padding:28px 18px; text-align:center;
+}
+#lock.on { display:block; }
+#lock input { font-size:28px; letter-spacing:8px; text-align:center; max-width:220px; margin:12px auto; display:block; }
+#whoBar { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+</style>
 </head>
-<body style="font-family:Arial;padding:24px">
-<p><a href="https://effulgent-caramel-6eb31b.netlify.app/">Open S&K Register</a></p>
-<p>If this does not jump, tap the link. Full till lives at that address until the complete index.html is uploaded from a computer.</p>
+<body>
+<div id="lock">
+  <h2 style="margin:8px 0">Aling store?</h2>
+  <div id="lockStore" class="chips" style="justify-content:center;margin-bottom:12px"></div>
+  <h2 style="margin:8px 0;font-size:22px">Sino ang cashier?</h2>
+  <p style="opacity:.85">Enter 4-digit PIN</p>
+  <div id="lockStaff" class="chips" style="justify-content:center"></div>
+  <input id="lockPin" inputmode="numeric" maxlength="4" placeholder="••••">
+  <button class="btn btn-a" id="lockGo" style="max-width:220px;margin:8px auto">Open register</button>
+  <p id="lockErr" class="warn"></p>
+</div>
+<header>
+  <h1 id="storeTitle">S&K Register</h1>
+  <p id="storeSub">Pick a store at login · three separate books</p>
+</header>
+<nav>
+  <button class="on" data-p="reg">Register</button>
+  <button data-p="cat">Catalog</button>
+  <button data-p="stock">Stock</button>
+  <button data-p="sales">Sales</button>
+  <button data-p="close">Close</button>
+  <button data-p="inv">Invoice</button>
+  <button data-p="staff">Staff</button>
+  <button data-p="set">Backup</button>
+</nav>
+
+<section class="page on" id="reg">
+  <div class="card">
+    <div class="row3">
+      <div><label>Petsa / Date</label><input id="rDate" type="date" class="ylw"></div>
+      <div><label>Cashier</label>
+        <div id="whoBar">
+          <b id="rCashierName">—</b>
+          <button type="button" class="btn-ghost" id="switchBtn" style="width:auto;padding:8px 10px;border:0;border-radius:8px">Switch</button>
+        </div>
+      </div>
+      <div><label>Resibo #</label><input id="rRcpt" class="ylw" inputmode="numeric"></div>
+    </div>
+    <div class="row">
+      <div><label>Bayad type</label>
+        <select id="rPay" class="ylw"><option>Cash</option><option>GCash</option><option>Other</option></select>
+      </div>
+      <div><label>Time</label><input id="rTime" type="time" class="ylw"></div>
+    </div>
+  </div>
+  <div class="card">
+    <label>Type a word — Coke, lucky, marlboro, load…</label>
+    <input id="rSearch" class="ylw" placeholder="coke  ·  lucky  ·  yosi  ·  oil" autocomplete="off">
+    <div class="chips" id="catChips"></div>
+    <div id="hits"></div>
+    <div class="row" style="margin-top:8px">
+      <div><label>Dami / Qty</label><input id="rQty" class="ylw" type="number" min="1" value="1"></div>
+      <div style="display:flex;align-items:end"><button class="btn btn-g" id="addBtn">Add highlighted item</button></div>
+    </div>
+    <div id="cart"></div>
+  </div>
+  <div class="sticky-pay card">
+    <div class="row">
+      <div><span class="muted">Kabuuan</span><b id="subtotal">₱0.00</b></div>
+      <div><label>Bayad / Tendered</label><input id="rTend" class="ylw" type="number" min="0" step="0.01"></div>
+    </div>
+    <p>Sukli / Change: <b id="change">₱0.00</b> <span id="short" class="warn"></span></p>
+    <button class="btn btn-a" id="saveBtn">SAVE SALE · I-SAVE ANG BENTA</button>
+    <p class="muted" id="saveMsg"></p>
+  </div>
+</section>
+
+<section class="page" id="cat">
+  <div class="card">
+    <p class="muted">Yellow-style fields: edit price and StartStock. Add a row for new items from her photos.</p>
+    <div class="row">
+      <div><label>Code</label><input id="nCode" class="ylw" placeholder="PEPSI8"></div>
+      <div><label>Name</label><input id="nName" class="ylw" placeholder="Pepsi bottle"></div>
+    </div>
+    <div class="row3">
+      <div><label>Category</label>
+        <select id="nCat"><option>Groceries</option><option>Gas station</option><option>Fishing supplies</option></select>
+      </div>
+      <div><label>Unit</label>
+        <select id="nUnit"><option>btl</option><option>pack</option><option>crate</option><option>pc</option><option>sachet</option><option>cup</option><option>can</option></select>
+      </div>
+      <div><label>Presyo</label><input id="nPrice" class="ylw" type="number" step="0.01"></div>
+    </div>
+    <div class="row3">
+      <div><label>Cost</label><input id="nCost" class="ylw" type="number" step="0.01"></div>
+      <div><label>Start stock</label><input id="nStart" class="ylw" type="number" value="0"></div>
+      <div><label>Reorder</label><input id="nReo" class="ylw" type="number" value="5"></div>
+    </div>
+    <label>Keywords / ibang tawag (comma)</label>
+    <input id="nKeys" class="ylw" placeholder="coke, kola, mismo, red">
+    <label>Picture / larawan (iPad camera or photo library)</label>
+    <input id="nPhoto" type="file" accept="image/*" capture="environment">
+    <p class="muted" id="nPhotoMsg"></p>
+    <button class="btn btn-g" id="addItemBtn" style="margin-top:8px">Add / update item</button>
+  </div>
+  <div class="card" style="overflow:auto"><table id="catTable"></table></div>
+</section>
+
+<section class="page" id="stock">
+  <div class="card" style="overflow:auto"><table id="stockTable"></table></div>
+</section>
+
+<section class="page" id="sales">
+  <div class="card">
+    <p class="muted">One row per line. Do not edit posted rows — add a correction sale if needed.</p>
+    <div class="card" style="overflow:auto;max-height:70vh"><table id="salesTable"></table></div>
+  </div>
+</section>
+
+<section class="page" id="close">
+  <div class="card">
+    <p><b id="cStoreTitle">S&K report</b></p>
+    <p class="muted">Each store has its own sales book. Switch store, then download that report only.</p>
+    <div class="chips" id="cStoreChips"></div>
+    <label>Close date</label>
+    <input id="cDate" type="date" class="ylw">
+    <div class="kpi" id="kpis" style="margin-top:10px"></div>
+  </div>
+  <div class="card">
+    <label>Opening float ₱ (this store)</label><input id="cFloat" class="ylw" type="number" value="2000">
+    <label>Counted cash at close ₱ (this store)</label><input id="cCount" class="ylw" type="number">
+    <p id="cExpect" class="muted"></p>
+    <button class="btn btn-a" id="repThis" style="margin-top:10px">Download THIS store report</button>
+    <button class="btn btn-g" id="repAll" style="margin-top:8px">Download all 3 store reports</button>
+    <button class="btn btn-ghost" id="repPrint" style="margin-top:8px">Print / screenshot this report</button>
+  </div>
+  <div class="card" style="overflow:auto"><table id="dayItems"></table></div>
+</section>
+
+<section class="page" id="inv">
+  <div class="card">
+    <p class="muted">Supplier invoice / resibo ng bili. Photo stays on this device.</p>
+    <label>Supplier</label><input id="iSup" class="ylw" placeholder="Coca-Cola dealer">
+    <label>Amount ₱</label><input id="iAmt" class="ylw" type="number" step="0.01">
+    <label>Notes</label><input id="iNote" class="ylw">
+    <label>Photo</label><input id="iPhoto" type="file" accept="image/*">
+    <button class="btn btn-g" id="iSave" style="margin-top:8px">Save invoice</button>
+  </div>
+  <div id="iList"></div>
+</section>
+
+<section class="page" id="staff">
+  <div class="card">
+    <p><b>Add employee</b></p>
+    <p class="muted">Manager PIN required. Then give that person their own 4-digit login PIN.</p>
+    <label>Employee name</label>
+    <input id="eName" class="ylw" placeholder="e.g. Ana">
+    <label>Their login PIN (4 digits)</label>
+    <input id="ePin" class="ylw" inputmode="numeric" maxlength="4" placeholder="4 digits">
+    <label>Your Manager PIN (required)</label>
+    <input id="eMgr" class="ylw" inputmode="numeric" maxlength="4" placeholder="Manager PIN">
+    <button class="btn btn-g" id="eAdd" style="margin-top:10px">Add employee</button>
+    <p id="eMsg" class="muted"></p>
+  </div>
+  <div class="card">
+    <p><b>Current staff</b></p>
+    <div id="staffList"></div>
+    <label style="margin-top:10px">Change Manager PIN</label>
+    <input id="sMgrNew" class="ylw" inputmode="numeric" maxlength="4" placeholder="New 4 digits">
+    <label>Current Manager PIN</label>
+    <input id="sMgrOld" class="ylw" inputmode="numeric" maxlength="4">
+    <button class="btn btn-ghost" id="sMgrSave" style="margin-top:8px">Update Manager PIN</button>
+  </div>
+</section>
+
+<section class="page" id="set">
+  <div class="card">
+    <label>Store name</label><input id="sName" class="ylw">
+    <button class="btn btn-g" id="sSave" style="margin-top:8px">Save store name</button>
+  </div>
+  <div class="card">
+    <p><b>Backup to JC (Katy PC)</b></p>
+    <p class="muted">When house fiber is up: tap Export. Email or save the file to Drive/iCloud. Import on this device to restore.</p>
+    <button class="btn btn-a" id="expBtn">Export ALL stores backup JSON</button>
+    <button class="btn btn-ghost" id="csvBtn" style="margin-top:8px">Export THIS store sales CSV</button>
+    <label style="margin-top:10px">Import backup</label>
+    <input id="impFile" type="file" accept="application/json">
+  </div>
+  <div class="card">
+    <p class="muted">Install: iPhone/iPad Share → Add to Home Screen. Android menu → Install app. Works offline after first open.</p>
+    <button class="btn btn-r" id="wipeBtn">Erase demo sales only</button>
+  </div>
+</section>
+
+<script>
+const SEED = [
+  {code:"MRB-RD",name:"Marlboro Red pack",cat:"Gas station",unit:"pack",cost:155,price:185,reo:5,start:20,keys:"marlboro,yosi,cig,red,pack"},
+  {code:"FRT-RD",name:"Fortune Red pack",cat:"Gas station",unit:"pack",cost:95,price:120,reo:5,start:20,keys:"fortune,yosi,cig"},
+  {code:"MTY-RD",name:"Mighty Red pack",cat:"Gas station",unit:"pack",cost:70,price:90,reo:5,start:15,keys:"mighty,yosi,cig"},
+  {code:"COKE8",name:"Coke Mismo / 8oz bottle",cat:"Groceries",unit:"btl",cost:16,price:22,reo:24,start:48,keys:"coke,kola,mismo,red,softdrinks,bote"},
+  {code:"COKE15",name:"Coke 1.5L",cat:"Groceries",unit:"btl",cost:62,price:78,reo:6,start:12,keys:"coke,liter,1.5,family"},
+  {code:"COKECS",name:"Coke crate (24 bottles)",cat:"Groceries",unit:"crate",cost:380,price:480,reo:2,start:8,keys:"coke,crate,case,kahon"},
+  {code:"PEPSI8",name:"Pepsi bottle",cat:"Groceries",unit:"btl",cost:16,price:22,reo:24,start:48,keys:"pepsi,kola,blue"},
+  {code:"RC8",name:"RC Cola bottle",cat:"Groceries",unit:"btl",cost:14,price:20,reo:24,start:36,keys:"rc,cola,kola"},
+  {code:"C2-500",name:"C2 Apple 500ml",cat:"Groceries",unit:"btl",cost:20,price:28,reo:8,start:18,keys:"c2,apple,juice"},
+  {code:"WAT500",name:"Nature Spring 500ml",cat:"Groceries",unit:"btl",cost:10,price:16,reo:12,start:24,keys:"water,tubig,nature"},
+  {code:"SML330",name:"San Mig Light 330ml",cat:"Groceries",unit:"btl",cost:38,price:52,reo:8,start:24,keys:"san mig,beer,light,sm"},
+  {code:"SM-PALE",name:"San Mig Pale Pilsen",cat:"Groceries",unit:"btl",cost:38,price:52,reo:8,start:24,keys:"san mig,beer,pale,pilsen"},
+  {code:"RH330",name:"Red Horse 330ml",cat:"Groceries",unit:"btl",cost:42,price:58,reo:8,start:24,keys:"red horse,beer,kabayo"},
+  {code:"LM-PC",name:"Lucky Me Pancit Canton",cat:"Groceries",unit:"pack",cost:14,price:20,reo:10,start:30,keys:"lucky,canton,noodles,pancit"},
+  {code:"NOVA",name:"Nova Country Cheddar",cat:"Groceries",unit:"pack",cost:18,price:25,reo:8,start:15,keys:"nova,chips,chichirya"},
+  {code:"OIL2T",name:"2T Motor Oil sachet",cat:"Gas station",unit:"sachet",cost:22,price:35,reo:8,start:20,keys:"oil,2t,motor,gasolina"},
+  {code:"KPK78",name:"Kopiko 78",cat:"Groceries",unit:"cup",cost:18,price:28,reo:6,start:12,keys:"kopiko,kape,coffee"},
+  {code:"LOAD50",name:"E-Load ₱50",cat:"Gas station",unit:"pc",cost:50,price:50,reo:0,start:0,keys:"load,eload,promo,globe,smart,50"},
+  {code:"LOAD100",name:"E-Load ₱100",cat:"Gas station",unit:"pc",cost:100,price:100,reo:0,start:0,keys:"load,eload,promo,100"},
+  {code:"EMPTY",name:"Empty bottle / bote return",cat:"Groceries",unit:"btl",cost:0,price:0,reo:0,start:0,keys:"bote,empty,return,blangko"},
+  {code:"HOOK6",name:"Fish hook pack #6",cat:"Fishing supplies",unit:"pack",cost:15,price:25,reo:5,start:10,keys:"hook,kawit,fishing,bingwit"},
+  {code:"LINE50",name:"Fishing line 50m",cat:"Fishing supplies",unit:"pc",cost:35,price:55,reo:3,start:8,keys:"line,nylon,fishing,pisi"},
+  {code:"SINK",name:"Sinker / lead weight",cat:"Fishing supplies",unit:"pc",cost:8,price:15,reo:8,start:20,keys:"sinker,tingga,weight,fishing"},
+  {code:"BAIT",name:"Dried bait / pain",cat:"Fishing supplies",unit:"pack",cost:12,price:20,reo:5,start:12,keys:"bait,pain,fishing"}
+];
+
+const $ = id => document.getElementById(id);
+const peso = n => "₱" + (Number(n)||0).toLocaleString("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2});
+const today = () => new Date().toLocaleDateString("en-CA");
+const nowT = () => new Date().toTimeString().slice(0,5);
+
+const STORES = [
+  {id:"groc", name:"Groceries"},
+  {id:"gas", name:"Gas station"},
+  {id:"fish", name:"Fishing supplies"}
+];
+function seedFor(name) {
+  return SEED.filter(s => s.cat===name).map(x => ({...x, active:true}));
+}
+function blankStore(name) {
+  return { settings:{ name, nextRcpt:1001, float:2000 }, catalog: seedFor(name), sales:[], invoices:[], cart:[] };
+}
+function load() {
+  const raw = localStorage.getItem("kaiah");
+  const d = raw ? JSON.parse(raw) : {};
+  if (!d.stores) {
+    const CAT_MAP = {
+      Drinks:"Groceries", Beer:"Groceries", Snacks:"Groceries", Household:"Groceries", Empties:"Groceries",
+      Cigarettes:"Gas station", Oil:"Gas station", Load:"Gas station"
+    };
+    (d.catalog||[]).forEach(c => { if (CAT_MAP[c.cat]) c.cat = CAT_MAP[c.cat]; });
+    const oldCat = d.catalog||[];
+    const oldSales = d.sales||[];
+    d.stores = {
+      groc: blankStore("Groceries"),
+      gas: blankStore("Gas station"),
+      fish: blankStore("Fishing supplies")
+    };
+    if (oldCat.length) {
+      STORES.forEach(s => {
+        const items = oldCat.filter(c => c.cat===s.name);
+        if (items.length) d.stores[s.id].catalog = items;
+        d.stores[s.id].sales = oldSales.filter(x => items.some(i=>i.code===x.code));
+      });
+    }
+  }
+  STORES.forEach(s => {
+    if (!d.stores[s.id]) d.stores[s.id] = blankStore(s.name);
+    seedFor(s.name).forEach(item => {
+      if (!d.stores[s.id].catalog.find(c=>c.code===item.code)) d.stores[s.id].catalog.push(item);
+    });
+  });
+  if (!d.staff || (d.staff.length===2 && d.staff[0].name==="Nanay" && d.staff[1].name==="JC")) {
+    d.staff = [{name:"Claire", pin:"0000"}];
+  }
+  if (!d.mgrPin) d.mgrPin = (d.settings && d.settings.mgrPin) || "2580";
+  if (!d.current) d.current = "groc";
+  d.session = d.session || null;
+  return d;
+}
+let DB = load();
+function st() { return DB.stores[DB.current]; }
+function save() { localStorage.setItem("kaiah", JSON.stringify(DB)); }
+
+function showLock(on) {
+  $("lock").classList.toggle("on", !!on);
+  if (on) {
+    $("lockPin").value = "";
+    $("lockErr").textContent = "";
+    $("lockStore").innerHTML = STORES.map(s =>
+      `<button type="button" data-sid="${s.id}" style="${s.id===DB.current?'outline:2px solid #C9A227':''}">${s.name}</button>`).join("");
+    $("lockStore").querySelectorAll("button").forEach(b => b.onclick = () => {
+      DB.current = b.dataset.sid;
+      $("lockStore").querySelectorAll("button").forEach(x=>x.style.outline="");
+      b.style.outline = "2px solid #C9A227";
+    });
+    $("lockStaff").innerHTML = (DB.staff||[]).map(s =>
+      `<button type="button" data-n="${s.name}">${s.name}</button>`).join("");
+    $("lockStaff").querySelectorAll("button").forEach(b => b.onclick = () => {
+      $("lockStaff").querySelectorAll("button").forEach(x=>x.style.outline="");
+      b.style.outline = "2px solid #C9A227";
+      $("lock").dataset.who = b.dataset.n;
+      $("lockPin").focus();
+    });
+    if (DB.staff[0]) { $("lock").dataset.who = DB.staff[0].name; }
+  }
+}
+function applySession() {
+  const s = STORES.find(x=>x.id===DB.current);
+  $("rCashierName").textContent = DB.session || "— tap Switch";
+  $("storeTitle").textContent = "S&K · " + (s?s.name:"Register");
+  $("storeSub").textContent = "S&K · " + (s?s.name:"pick counter") + (DB.session? " · "+DB.session : "");
+  $("rRcpt").value = st().settings.nextRcpt;
+}
+
+function soldQty(code) {
+  return st().sales.filter(s => s.code===code).reduce((a,s)=>a+Number(s.qty),0);
+}
+function onHand(it) { return Number(it.start||0) - soldQty(it.code); }
+
+function haystack(c) {
+  return [c.code, c.name, c.cat, c.unit, c.keys||""].join(" ").toLowerCase();
+}
+function searchItems(q) {
+  q = (q||"").trim().toLowerCase();
+  const list = st().catalog.filter(c => c.active!==false);
+  if (!q) return list.slice(0, 8);
+  return list.filter(c => haystack(c).includes(q)).slice(0, 12);
+}
+let picked = null;
+function renderHits() {
+  const q = $("rSearch").value;
+  const hits = searchItems(q);
+  if (!hits.length) {
+    $("hits").innerHTML = '<p class="warn">Walang tama. Type coke, lucky, yosi, load — or add the item in Catalog.</p>';
+    picked = null; return;
+  }
+  if (!picked || !hits.find(h => h.code===picked.code)) picked = hits[0];
+  $("hits").innerHTML = hits.map(h =>
+    `<button class="hit" data-code="${h.code}" style="${h.code===picked.code?'background:#C9A227':''}">
+      ${h.photo?`<img src="${h.photo}" alt="">`:`<div class="thumb"></div>`}
+      <div><b>${h.name}</b>
+      <span class="muted">${peso(h.price)} · ${h.cat}</span></div>
+    </button>`
+  ).join("");
+  $("hits").querySelectorAll(".hit").forEach(b => b.onclick = () => {
+    picked = st().catalog.find(c => c.code===b.dataset.code);
+    renderHits();
+  });
+}
+function fillChips() {
+  const cats = [...new Set(st().catalog.map(c=>c.cat))];
+  $("catChips").innerHTML = cats.map(c => `<button data-c="${c}">${c}</button>`).join("");
+  $("catChips").querySelectorAll("button").forEach(b => b.onclick = () => {
+    $("rSearch").value = b.dataset.c.toLowerCase();
+    renderHits();
+  });
+}
+
+function renderCart() {
+  const el = $("cart");
+  if (!st().cart.length) { el.innerHTML = '<p class="muted">Cart empty. Magdagdag ng item.</p>'; }
+  else {
+    el.innerHTML = st().cart.map((l,i) =>
+      `<div class="line"><div>${(st().catalog.find(c=>c.code===l.code)||{}).photo?`<img class="thumb" src="${st().catalog.find(c=>c.code===l.code).photo}" style="width:36px;height:36px;vertical-align:middle;margin-right:6px">`:""}<b>${l.name}</b></div>
+       <div>${peso(l.price)}</div><div>×${l.qty}</div>
+       <div><b>${peso(l.price*l.qty)}</b> <button data-x="${i}" class="btn-ghost" style="padding:4px 8px;border:0;border-radius:6px">✕</button></div></div>`
+    ).join("");
+    el.querySelectorAll("[data-x]").forEach(b => b.onclick = () => { st().cart.splice(+b.dataset.x,1); save(); renderCart(); });
+  }
+  const sub = st().cart.reduce((a,l)=>a+l.price*l.qty,0);
+  $("subtotal").textContent = peso(sub);
+  const tend = Number($("rTend").value||0);
+  const ch = tend ? tend-sub : 0;
+  $("change").textContent = tend?peso(ch):"—";
+  $("short").textContent = tend && ch<0 ? "KULANG ANG BAYAD" : "";
+}
+
+$("rSearch").addEventListener("input", renderHits);
+
+$("addBtn").onclick = () => {
+  const it = picked || searchItems($("rSearch").value)[0];
+  const qty = Number($("rQty").value||0);
+  if (!it || qty<=0) { alert("Code not found / walang code. Add it on Catalog first."); return; }
+  if (it.cat!=="Load" && it.cat!=="Empties" && onHand(it)<qty)
+    if (!confirm(it.code+" on hand "+onHand(it)+". Sell anyway?")) return;
+  const exist = st().cart.find(l => l.code===it.code);
+  if (exist) exist.qty += qty;
+  else st().cart.push({code:it.code,name:it.name,cat:it.cat,price:Number(it.price),qty});
+  $("rSearch").value=""; $("rQty").value=1; save(); renderCart();
+};
+
+$("rTend").oninput = renderCart;
+
+$("switchBtn").onclick = () => showLock(true);
+$("lockGo").onclick = () => {
+  const name = $("lock").dataset.who;
+  const pin = ($("lockPin").value||"").trim();
+  const who = (DB.staff||[]).find(s => s.name===name && s.pin===pin);
+  if (!who) { $("lockErr").textContent = "Mali ang PIN / wrong PIN"; return; }
+  DB.session = who.name;
+  save(); applySession(); showLock(false); renderAll();
+};
+$("lockPin").addEventListener("keydown", e => { if (e.key==="Enter") $("lockGo").click(); });
+
+$("saveBtn").onclick = () => {
+  if (!DB.session) { showLock(true); alert("Enter staff PIN first."); return; }
+  if (!st().cart.length) { alert("Cart empty."); return; }
+  const sub = st().cart.reduce((a,l)=>a+l.price*l.qty,0);
+  const tend = Number($("rTend").value||0);
+  const pay = $("rPay").value;
+  if (pay==="Cash" && tend && tend<sub) { alert("Kulanga ang bayad."); return; }
+  const rcpt = Number($("rRcpt").value||st().settings.nextRcpt);
+  const rec = {
+    receipt: rcpt, date:$("rDate").value, time:$("rTime").value,
+    cashier:DB.session, payment:pay, tendered:tend, change: tend?tend-sub:0
+  };
+  st().cart.forEach(l => {
+    st().sales.push({
+      ...rec, code:l.code, name:l.name, cat:l.cat, qty:l.qty,
+      unitPrice:l.price, line:l.price*l.qty, id: Date.now()+"-"+l.code
+    });
+  });
+  st().settings.nextRcpt = rcpt+1;
+  st().cart = [];
+  $("rTend").value="";
+  $("rRcpt").value = st().settings.nextRcpt;
+  save();
+  renderCart(); renderAll();
+  $("saveMsg").textContent = "Saved resibo #"+rcpt+". Stock updated.";
+};
+
+function shrinkPhoto(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const max = 320;
+      let w = img.width, h = img.height;
+      if (w > h && w > max) { h = h * max / w; w = max; }
+      else if (h > max) { w = w * max / h; h = max; }
+      const cv = document.createElement("canvas");
+      cv.width = w; cv.height = h;
+      cv.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(cv.toDataURL("image/jpeg", 0.7));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+function renderCat() {
+  $("catTable").innerHTML = "<tr><th></th><th>Code</th><th>Name</th><th>Presyo</th><th>Start</th></tr>" +
+    st().catalog.map((c,i)=>`<tr>
+      <td>${c.photo?`<img class="thumb" src="${c.photo}">`:`<div class="thumb"></div>`}</td>
+      <td>${c.code}</td><td>${c.name}<div class="muted">${c.cat} · ${c.unit}</div></td>
+      <td><input data-p="${i}" type="number" step="0.01" value="${c.price}" style="width:90px"></td>
+      <td><input data-s="${i}" type="number" value="${c.start}" style="width:70px"></td>
+      </tr>`).join("");
+  $("catTable").querySelectorAll("[data-p]").forEach(inp => inp.onchange = () => {
+    st().catalog[+inp.dataset.p].price = Number(inp.value); save();
+  });
+  $("catTable").querySelectorAll("[data-s]").forEach(inp => inp.onchange = () => {
+    st().catalog[+inp.dataset.s].start = Number(inp.value); save(); renderStock();
+  });
+}
+$("nPhoto").onchange = () => {
+  $("nPhotoMsg").textContent = $("nPhoto").files[0] ? "Photo ready — tap Add / update item" : "";
+};
+$("addItemBtn").onclick = async () => {
+  const code = $("nCode").value.trim().toUpperCase();
+  if (!code || !$("nName").value) { alert("Need code and name"); return; }
+  const old = st().catalog.find(c=>c.code===code);
+  let photo = old && old.photo ? old.photo : "";
+  if ($("nPhoto").files[0]) {
+    try { photo = await shrinkPhoto($("nPhoto").files[0]); }
+    catch(e) { alert("Could not read photo"); return; }
+  }
+  const row = {
+    code, name:$("nName").value, cat:$("nCat").value, unit:$("nUnit").value,
+    cost:Number($("nCost").value||0), price:Number($("nPrice").value||0),
+    reo:Number($("nReo").value||0), start:Number($("nStart").value||0),
+    keys:($("nKeys").value||"").toLowerCase(), photo, active:true
+  };
+  const ix = st().catalog.findIndex(c=>c.code===code);
+  if (ix>=0) st().catalog[ix] = row; else st().catalog.push(row);
+  save(); renderCat(); renderStock(); renderHits();
+  $("nCode").value=$("nName").value=$("nPrice").value=$("nKeys").value="";
+  $("nPhoto").value=""; $("nPhotoMsg").textContent="Saved picture on "+code;
+};
+
+function renderStock() {
+  $("stockTable").innerHTML = "<tr><th>Code</th><th>Name</th><th>Start</th><th>Sold</th><th>On hand</th><th></th></tr>" +
+    st().catalog.map(c => {
+      const oh = onHand(c), low = oh<=Number(c.reo||0) && c.cat!=="Load" && c.cat!=="Empties";
+      return `<tr><td>${c.code}</td><td>${c.name}</td><td>${c.start}</td><td>${soldQty(c.code)}</td>
+        <td><b>${oh}</b></td><td>${low?'<span class="low">LOW / KULANG</span>':''}</td></tr>`;
+    }).join("");
+}
+function renderSales() {
+  const rows = [...st().sales].reverse().slice(0,200);
+  $("salesTable").innerHTML = "<tr><th>#</th><th>Date</th><th>Who</th><th>Item</th><th>Qty</th><th>Total</th><th>Pay</th></tr>" +
+    rows.map(s=>`<tr><td>${s.receipt}</td><td>${s.date} ${s.time||""}</td><td>${s.cashier||""}</td><td>${s.code}<div class="muted">${s.name}</div></td>
+      <td>${s.qty}</td><td>${peso(s.line)}</td><td>${s.payment}</td></tr>`).join("");
+}
+function storeName(id) {
+  return (STORES.find(x=>x.id===id)||{}).name || id;
+}
+function linesFor(id, d) {
+  return (DB.stores[id] && DB.stores[id].sales || []).filter(s=>s.date===d);
+}
+function reportText(id, d) {
+  const s = DB.stores[id] || blankStore(storeName(id));
+  const lines = linesFor(id, d);
+  const rcpts = [...new Set(lines.map(x=>x.receipt))];
+  const tot = lines.reduce((a,x)=>a+Number(x.line),0);
+  const cash = lines.filter(x=>x.payment==="Cash").reduce((a,x)=>a+Number(x.line),0);
+  const gc = lines.filter(x=>x.payment==="GCash").reduce((a,x)=>a+Number(x.line),0);
+  const oth = tot-cash-gc;
+  const byWho = {};
+  lines.forEach(x => { const w=x.cashier||"?"; byWho[w]=(byWho[w]||0)+Number(x.line); });
+  const by = {};
+  lines.forEach(x => { by[x.code]=by[x.code]||{name:x.name,qty:0,peso:0}; by[x.code].qty+=x.qty; by[x.code].peso+=x.line; });
+  const fl = Number((s.settings&&s.settings.float)||0);
+  let t = "S&K REGISTER REPORT\n";
+  t += "Store: "+storeName(id)+"\n";
+  t += "Date: "+d+"\n";
+  t += "Generated: "+new Date().toLocaleString()+"\n";
+  t += "--------------------------------\n";
+  t += "Receipts: "+rcpts.length+"\n";
+  t += "Total sales: "+peso(tot)+"\n";
+  t += "Cash: "+peso(cash)+"\n";
+  t += "GCash: "+peso(gc)+"\n";
+  t += "Other: "+peso(oth)+"\n";
+  t += "Opening float: "+peso(fl)+"\n";
+  t += "Expected cash (float + cash sales): "+peso(fl+cash)+"\n";
+  t += "--------------------------------\nSALES BY CASHIER\n";
+  Object.keys(byWho).forEach(w => { t += w+": "+peso(byWho[w])+"\n"; });
+  if (!Object.keys(byWho).length) t += "(none)\n";
+  t += "--------------------------------\nITEMS SOLD\n";
+  Object.entries(by).forEach(([k,v]) => { t += k+"  "+v.name+"  x"+v.qty+"  "+peso(v.peso)+"\n"; });
+  if (!Object.keys(by).length) t += "(none)\n";
+  t += "--------------------------------\nIndependent book — not mixed with other S&K stores.\n";
+  return t;
+}
+function downloadText(name, text) {
+  const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+}
+function renderClose() {
+  const d = $("cDate").value || today();
+  $("cDate").value = d;
+  const cur = STORES.find(x=>x.id===DB.current);
+  $("cStoreTitle").textContent = "S&K report · " + (cur?cur.name:"?");
+  $("cStoreChips").innerHTML = STORES.map(s =>
+    `<button type="button" data-sid="${s.id}" style="${s.id===DB.current?'outline:3px solid #C9A227':''}">${s.name}</button>`
+  ).join("");
+  $("cStoreChips").querySelectorAll("button").forEach(b => b.onclick = () => {
+    DB.current = b.dataset.sid; save(); applySession(); renderAll();
+  });
+  if (st().settings.float != null) $("cFloat").value = st().settings.float;
+  const lines = st().sales.filter(s=>s.date===d);
+  const rcpts = [...new Set(lines.map(s=>s.receipt))];
+  const tot = lines.reduce((a,s)=>a+Number(s.line),0);
+  const cash = lines.filter(s=>s.payment==="Cash").reduce((a,s)=>a+Number(s.line),0);
+  const gc = lines.filter(s=>s.payment==="GCash").reduce((a,s)=>a+Number(s.line),0);
+  const oth = tot-cash-gc;
+  $("kpis").innerHTML = `
+    <div><span class="muted">Total sales</span><b>${peso(tot)}</b></div>
+    <div><span class="muted">Receipts</span><b>${rcpts.length}</b></div>
+    <div><span class="muted">Cash</span><b>${peso(cash)}</b></div>
+    <div><span class="muted">GCash</span><b>${peso(gc)}</b></div>
+    <div><span class="muted">Other</span><b>${peso(oth)}</b></div>
+    <div><span class="muted">Lines</span><b>${lines.length}</b></div>`;
+  const byWho = {};
+  lines.forEach(s => { const w=s.cashier||"?"; byWho[w]=(byWho[w]||0)+Number(s.line); });
+  $("kpis").innerHTML += Object.entries(byWho).map(([w,v])=>`<div><span class="muted">${w}</span><b>${peso(v)}</b></div>`).join("");
+  const fl = Number($("cFloat").value||0), cnt = $("cCount").value;
+  const exp = fl+cash;
+  $("cExpect").textContent = cnt==="" ? "Expected cash = float + Cash sales = "+peso(exp)
+    : "Expected "+peso(exp)+" · Over/(Short) "+peso(Number(cnt)-exp)+"  (GCash not in drawer)";
+  const by = {};
+  lines.forEach(s => { by[s.code]=by[s.code]||{name:s.name,qty:0,peso:0}; by[s.code].qty+=s.qty; by[s.code].peso+=s.line; });
+  $("dayItems").innerHTML = "<tr><th>Code</th><th>Name</th><th>Qty</th><th>Sales</th></tr>" +
+    Object.entries(by).map(([k,v])=>`<tr><td>${k}</td><td>${v.name}</td><td>${v.qty}</td><td>${peso(v.peso)}</td></tr>`).join("");
+}
+$("cDate").onchange = $("cCount").oninput = renderClose;
+$("cFloat").oninput = () => {
+  st().settings.float = Number($("cFloat").value||0);
+  save(); renderClose();
+};
+$("repThis").onclick = () => {
+  const d = $("cDate").value || today();
+  const slug = (storeName(DB.current)||"store").replace(/\s+/g,"-");
+  downloadText("S&K-"+slug+"-"+d+".txt", reportText(DB.current, d));
+};
+$("repAll").onclick = () => {
+  const d = $("cDate").value || today();
+  STORES.forEach(s => {
+    const slug = s.name.replace(/\s+/g,"-");
+    downloadText("S&K-"+slug+"-"+d+".txt", reportText(s.id, d));
+  });
+};
+$("repPrint").onclick = () => {
+  const d = $("cDate").value || today();
+  const w = window.open("", "_blank");
+  w.document.write("<pre style='font:18px/1.4 Arial;padding:16px;white-space:pre-wrap'>"+
+    reportText(DB.current,d).replace(/</g,"&lt;")+"</pre>");
+  w.document.close(); w.focus(); w.print();
+};
+
+function renderInv() {
+  $("iList").innerHTML = st().invoices.slice().reverse().map(i =>
+    `<div class="card"><b>${peso(i.amount)}</b> · ${i.supplier||"—"} <div class="muted">${i.date} ${i.note||""}</div>
+     ${i.photo?`<img src="${i.photo}" style="max-width:100%;border-radius:8px;margin-top:6px">`:""}</div>`
+  ).join("") || '<p class="muted">No invoices yet.</p>';
+}
+$("iSave").onclick = () => {
+  const file = $("iPhoto").files[0];
+  const rec = { date:today(), supplier:$("iSup").value, amount:Number($("iAmt").value||0), note:$("iNote").value, photo:"" };
+  const done = () => { st().invoices.push(rec); save(); $("iSup").value=$("iAmt").value=$("iNote").value=""; $("iPhoto").value=""; renderInv(); };
+  if (file) {
+    const r = new FileReader();
+    r.onload = e => { rec.photo = e.target.result; done(); };
+    r.readAsDataURL(file);
+  } else done();
+};
+
+function renderSet() {
+  const s = STORES.find(x=>x.id===DB.current);
+  $("sName").value = s ? s.name : "";
+  applySession();
+  $("staffList").innerHTML = (DB.staff||[]).map((s,i)=>
+    `<div class="line" style="grid-template-columns:1fr auto auto"><b>${s.name}</b><span class="muted">has PIN</span>
+     <button class="btn-ghost" data-d="${i}" style="padding:6px 10px;border:0;border-radius:6px">Remove</button></div>`
+  ).join("") || "<p class='muted'>No staff yet.</p>";
+  $("staffList").querySelectorAll("[data-d]").forEach(b => b.onclick = () => {
+    const mgr = prompt("Manager PIN to remove this employee:");
+    if (mgr !== DB.mgrPin) { alert("Wrong Manager PIN"); return; }
+    DB.staff.splice(+b.dataset.d,1); save(); renderSet();
+  });
+  if ($("nCat")) {
+    const name = s ? s.name : "Groceries";
+    $("nCat").value = name;
+  }
+}
+$("sSave").onclick = () => {
+  save(); applySession();
+};
+$("eAdd").onclick = () => {
+  const name = ($("eName").value||"").trim();
+  const pin = ($("ePin").value||"").trim();
+  const mgr = ($("eMgr").value||"").trim();
+  if (mgr !== (DB.mgrPin||"2580")) { $("eMsg").textContent = "Wrong Manager PIN."; $("eMsg").className="warn"; return; }
+  if (!name || !/^\d{4}$/.test(pin)) { $("eMsg").textContent = "Need name + exactly 4-digit PIN."; $("eMsg").className="warn"; return; }
+  if ((DB.staff||[]).some(s => s.pin===pin && s.name.toLowerCase()!==name.toLowerCase())) {
+    $("eMsg").textContent = "That PIN is already used."; $("eMsg").className="warn"; return;
+  }
+  const ix = DB.staff.findIndex(s=>s.name.toLowerCase()===name.toLowerCase());
+  if (ix>=0) DB.staff[ix].pin = pin; else DB.staff.push({name, pin});
+  $("eName").value=$("ePin").value=$("eMgr").value="";
+  $("eMsg").textContent = name+" added. They log in with their PIN.";
+  $("eMsg").className="ok";
+  save(); renderSet();
+};
+$("sMgrSave").onclick = () => {
+  if ($("sMgrOld").value !== DB.mgrPin) { alert("Current Manager PIN is wrong"); return; }
+  if (!/^\d{4}$/.test($("sMgrNew").value||"")) { alert("New PIN must be 4 digits"); return; }
+  DB.mgrPin = $("sMgrNew").value;
+  $("sMgrOld").value=$("sMgrNew").value="";
+  save(); alert("Manager PIN updated");
+};
+
+$("expBtn").onclick = () => {
+  const blob = new Blob([JSON.stringify({exported:new Date().toISOString(), ...DB, cart:[]},null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "kaiah-backup-"+today()+".json";
+  a.click();
+};
+$("csvBtn").onclick = () => {
+  const head = "Receipt,Date,Time,Cashier,Code,Name,Category,Qty,UnitPrice,LineTotal,Payment";
+  const rows = st().sales.map(s => [s.receipt,s.date,s.time,s.cashier,s.code,`"${s.name}"`,s.cat,s.qty,s.unitPrice,s.line,s.payment].join(","));
+  const blob = new Blob([head+"\n"+rows.join("\n")], {type:"text/csv"});
+  const a = document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="S&K-"+(storeName(DB.current)||"store").replace(/\s+/g,"-")+"-sales-"+today()+".csv"; a.click();
+};
+$("impFile").onchange = ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { try {
+    const d = JSON.parse(r.result);
+    if (d.stores) DB = d;
+    else throw 0;
+    DB.session = null;
+    save(); renderAll(); applySession(); alert("Imported.");
+  } catch(e) { alert("Bad file"); } };
+  r.readAsText(f);
+};
+$("wipeBtn").onclick = () => {
+  if (!confirm("Clear sales + invoices? Catalog stays.")) return;
+  st().sales=[]; st().invoices=[]; st().settings.nextRcpt=1001; save(); renderAll();
+};
+
+function renderAll() {
+  fillChips(); renderHits(); renderCart(); renderCat(); renderStock(); renderSales(); renderClose(); renderInv(); renderSet();
+}
+
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
+  document.querySelectorAll(".page").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on"); $(b.dataset.p).classList.add("on");
+  if (b.dataset.p==="stock") renderStock();
+  if (b.dataset.p==="sales") renderSales();
+  if (b.dataset.p==="close") renderClose();
+  if (b.dataset.p==="staff") renderSet();
+});
+
+$("rDate").value = today();
+$("cDate").value = today();
+$("rTime").value = nowT();
+$("rRcpt").value = st().settings.nextRcpt;
+renderAll();
+applySession();
+if (!DB.session) showLock(true);
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
 </body>
 </html>
