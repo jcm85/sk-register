@@ -64,23 +64,32 @@ input.ylw, select.ylw { background:var(--ylw); }
   display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; align-items:start;
 }
 .reg-side {
-  position:sticky; top:128px;
-  height:calc(100vh - 140px);
-  height:calc(100dvh - 140px);
   display:flex; flex-direction:column; gap:10px;
-  overflow:hidden;
 }
-.reg-side > .card { margin-bottom:0; }
-.cart-card {
-  flex:1 1 auto; min-height:140px;
-  display:flex; flex-direction:column; overflow:hidden;
+.cart-card { min-height:120px; }
+#saleMeta { -webkit-overflow-scrolling:touch; }
+.pay-card { margin-bottom:0; }
+#cart { -webkit-overflow-scrolling:touch; }
+/* iPad landscape + PC: sticky right rail keeps cart, tender, SAVE on screen */
+@media (min-width:901px) {
+  .reg-side {
+    position:sticky; top:128px;
+    height:calc(100vh - 140px);
+    height:calc(100dvh - 140px);
+    overflow:hidden;
+  }
+  .reg-side > .card { margin-bottom:0; }
+  .cart-card {
+    flex:1 1 auto; min-height:140px;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  #saleMeta {
+    flex:0 1 auto; min-height:0; overflow:auto;
+  }
+  .pay-card { flex:0 0 auto; }
+  #cart { flex:1 1 auto; min-height:0; overflow:auto; }
 }
-#saleMeta {
-  flex:0 1 auto; min-height:0; overflow:auto;
-  -webkit-overflow-scrolling:touch;
-}
-.pay-card { flex:0 0 auto; margin-bottom:0; }
-@media (max-height:900px) {
+@media (min-width:901px) and (max-width:1279px) and (max-height:900px) {
   .reg-side .sale-grid { gap:8px 12px; }
   .reg-side label { margin:4px 0 4px; font-size:13px; }
   .reg-side input, .reg-side select {
@@ -90,6 +99,100 @@ input.ylw, select.ylw { background:var(--ylw); }
   .reg-side .card { padding:12px; }
   .pay-card .btn-a { margin-top:8px; min-height:56px; font-size:20px; }
   .cart-card { min-height:120px; }
+}
+/* Narrow / phone widths: stack — no 100dvh rail */
+@media (max-width:900px) {
+  .reg-layout { grid-template-columns:minmax(0,1fr); }
+  .reg-layout > * { min-width:0; max-width:100%; }
+  .reg-side {
+    position:static; height:auto; overflow:visible;
+  }
+  .cart-card {
+    max-height:200px; min-height:100px;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  #cart { flex:1 1 auto; min-height:0; overflow:auto; }
+}
+/* iPhone portrait: compact cart, tender+SAVE pinned to safe bottom, lean top nav */
+@media (max-width:600px) {
+  body { padding-bottom:0; font-size:16px; }
+  .page { padding:12px; max-width:100%; }
+  #reg {
+    padding-bottom:calc(210px + env(safe-area-inset-bottom, 0px));
+  }
+  #tabs button[data-p="cat"],
+  #tabs button[data-p="inv"],
+  #tabs button[data-p="staff"],
+  #tabs button[data-p="set"] { display:none; }
+  nav { gap:6px; padding:8px 10px; top:64px; }
+  nav button { padding:10px 12px; font-size:14px; min-height:40px; }
+  header { padding:8px 10px; }
+  header h1 { font-size:18px; }
+  header p { display:none; }
+  #menuBtn { flex:0 0 44px; width:44px; height:44px; }
+  .reg-side { gap:8px; }
+  .cart-card { max-height:160px; min-height:88px; padding:10px; }
+  #saleMeta { padding:10px; }
+  .sale-grid { gap:8px 10px; }
+  .pay-card {
+    position:fixed; left:0; right:0; bottom:0; z-index:18;
+    margin:0; border-radius:16px 16px 0 0;
+    box-shadow:0 -6px 24px rgba(0,0,0,.14);
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  .pay-card .btn-a { margin-top:8px; min-height:52px; font-size:18px; }
+  .pay-card .money { font-size:22px; min-height:36px; }
+  .pay-card input { min-height:44px; font-size:18px; padding:8px 10px; }
+  .pay-card label { margin:4px 0 4px; font-size:13px; }
+  .hit { min-height:56px; font-size:16px; padding:10px; }
+  .hit b { font-size:18px; }
+  .hit img, .thumb { width:52px; height:52px; }
+  input.hit-qty, .hit-add { min-height:56px; width:64px; flex:0 0 64px; font-size:16px; }
+  .hit-row { gap:6px; }
+  .card { padding:12px; }
+  .search-row .btn { min-height:48px; padding:10px 14px; }
+  input, select, textarea { min-height:48px; font-size:18px; }
+}
+/* PC: denser spreadsheet-style controls; still two-column register */
+@media (min-width:1280px) {
+  body { font-size:15px; padding-bottom:16px; }
+  .page { max-width:none; padding:12px 20px; }
+  header { padding:8px 14px; }
+  header h1 { font-size:18px; }
+  header p { font-size:12px; }
+  #menuBtn { flex:0 0 40px; width:40px; height:40px; font-size:20px; border-radius:8px; }
+  nav { gap:6px; padding:8px 14px; top:56px; }
+  nav button {
+    padding:8px 12px; min-height:36px; font-size:14px; border-radius:8px;
+  }
+  .reg-layout { gap:12px; }
+  .reg-side { top:108px; }
+  .card { padding:12px; border-radius:10px; }
+  label { font-size:13px; margin:6px 0 4px; }
+  input, select, textarea {
+    min-height:40px; font-size:15px; padding:8px 10px; border-radius:8px;
+  }
+  .search-row .btn { min-height:40px; padding:8px 14px; font-size:14px; }
+  .btn { min-height:40px; padding:10px 12px; font-size:15px; border-radius:8px; }
+  .btn-a { min-height:44px; font-size:16px; }
+  .pay-card .btn-a { min-height:44px; font-size:16px; margin-top:8px; }
+  .btn-ghost { min-height:36px; padding:8px 10px; font-size:13px; }
+  .money { font-size:22px; min-height:36px; }
+  .hit { min-height:48px; font-size:14px; padding:8px; border-radius:8px; }
+  .hit b { font-size:15px; }
+  .hit img, .thumb { width:44px; height:44px; }
+  input.hit-qty, .hit-add { min-height:48px; width:56px; flex:0 0 56px; font-size:14px; }
+  .chips button { padding:8px 12px; min-height:36px; font-size:13px; }
+  table { font-size:14px; }
+  th { padding:6px 8px; font-size:13px; }
+  td { padding:6px 8px; }
+  .kpi b { font-size:20px; }
+  .kpi div { padding:10px; }
+  #whoBar { height:40px; min-height:40px; }
+  #rCashierName { font-size:16px; }
+  .cart-head b { font-size:16px; }
+  #cart .line, .line { font-size:14px; padding:8px 0; }
+  .pay-card .btn-a { margin-top:8px; }
 }
 .sale-grid {
   display:grid; grid-template-columns:1fr 1fr; gap:14px 16px; align-items:end;
@@ -322,6 +425,10 @@ body.lock-on { overflow:hidden; }
     <button type="button" class="side-btn" data-help="tutor">Tutorial</button>
     <button type="button" class="side-btn" data-help="lang">Language</button>
     <button type="button" class="side-btn" data-help="news">What's new</button>
+    <button type="button" class="side-btn" data-page="cat">Catalog</button>
+    <button type="button" class="side-btn" data-page="inv">Invoice</button>
+    <button type="button" class="side-btn" data-page="staff">Staff</button>
+    <button type="button" class="side-btn" data-page="set">Backup</button>
   </div>
   <div id="helpBody"></div>
 </aside>
@@ -2192,6 +2299,18 @@ document.querySelectorAll("#drawer [data-help]").forEach(b => b.onclick = () => 
   helpTab = b.dataset.help;
   renderHelp();
   sndTap();
+});
+document.querySelectorAll("#drawer [data-page]").forEach(b => b.onclick = () => {
+  const id = b.dataset.page;
+  showPage(id);
+  if (id==="stock") renderStock();
+  if (id==="sales") renderSales();
+  if (id==="close") renderClose();
+  if (id==="staff" || id==="set") renderSet();
+  if (id==="cat") renderCat();
+  if (id==="inv") renderInv();
+  closeDrawer();
+  sndNav();
 });
 $("tutorNewsGo").onclick = () => startTutor();
 $("tutorNewsLater").onclick = () => { ackTutor(); sndTap(); };
