@@ -41,8 +41,9 @@ input, select, textarea {
   font-size:22px; background:#fff; min-height:56px;
 }
 input.ylw { background:var(--ylw); }
-.row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+.row { display:grid; grid-template-columns:1fr 1fr; gap:12px; min-width:0; }
+.row > * { min-width:0; }
+.row3 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .btn {
   border:0; border-radius:14px; padding:18px 16px; font-weight:800; font-size:20px; width:100%;
   min-height:56px;
@@ -84,7 +85,13 @@ td { padding:10px; border-bottom:1px solid #eee; }
 }
 #lock.on { display:block; }
 #lock input { font-size:28px; letter-spacing:8px; text-align:center; max-width:220px; margin:12px auto; display:block; }
-#whoBar { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+#whoBar {
+  display:flex; justify-content:space-between; align-items:center; gap:12px;
+  background:var(--ylw); border:2px solid #ccc; border-radius:12px;
+  padding:12px 14px; min-height:56px;
+}
+#whoBar b { font-size:22px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#switchBtn { width:auto; flex-shrink:0; padding:10px 16px; border:0; border-radius:8px; min-height:44px; }
 </style>
 </head>
 <body>
@@ -115,15 +122,16 @@ td { padding:10px; border-bottom:1px solid #eee; }
 
 <section class="page on" id="reg">
   <div class="card">
-    <div class="row3">
+    <div class="row">
       <div><label>Petsa / Date</label><input id="rDate" type="date" class="ylw"></div>
-      <div><label>Cashier</label>
-        <div id="whoBar">
-          <b id="rCashierName">—</b>
-          <button type="button" class="btn-ghost" id="switchBtn" style="width:auto;padding:8px 10px;border:0;border-radius:8px">Switch</button>
-        </div>
-      </div>
       <div><label>Resibo #</label><input id="rRcpt" class="ylw" inputmode="numeric"></div>
+    </div>
+    <div>
+      <label>Cashier</label>
+      <div id="whoBar">
+        <b id="rCashierName">—</b>
+        <button type="button" class="btn-ghost" id="switchBtn">Switch</button>
+      </div>
     </div>
     <div class="row">
       <div><label>Bayad type</label>
@@ -186,6 +194,11 @@ td { padding:10px; border-bottom:1px solid #eee; }
 </section>
 
 <section class="page" id="stock">
+  <div class="card">
+    <p><b>On-hand vs start (this store)</b></p>
+    <p class="muted">Green bar = pieces left. Short bar = almost out.</p>
+    <div id="stockBars"></div>
+  </div>
   <div class="card" style="overflow:auto"><table id="stockTable"></table></div>
 </section>
 
@@ -208,6 +221,8 @@ td { padding:10px; border-bottom:1px solid #eee; }
     </div>
     <input id="cDate" type="hidden">
     <div class="kpi" id="kpis" style="margin-top:10px"></div>
+    <canvas id="salesSpark" width="640" height="220" style="width:100%;max-width:100%;height:220px;background:#10261e;border-radius:12px;margin-top:10px"></canvas>
+    <p class="muted" id="sparkLbl">Daily sales — this store</p>
     <div id="cCharts" style="margin-top:12px"></div>
   </div>
   <div class="card">
@@ -577,6 +592,14 @@ function renderStock() {
       return `<tr><td>${c.code}</td><td>${c.name}</td><td>${c.start}</td><td>${soldQty(c.code)}</td>
         <td><b>${oh}</b></td><td>${low?'<span class="low">LOW / KULANG</span>':''}</td></tr>`;
     }).join("");
+  const maxStart = Math.max(1, ...st().catalog.map(c => Number(c.start||0)));
+  $("stockBars").innerHTML = st().catalog.map(c => {
+    const oh = Math.max(0, onHand(c));
+    const start = Number(c.start||0) || 1;
+    const pct = Math.min(100, Math.round(100*oh/start));
+    const low = oh<=Number(c.reo||0) && c.cat!=="Load" && c.cat!=="Empties";
+    return `<div class="barrow"><span>${c.name}</span><div class="bartrk"><div class="barfill" style="width:${pct}%;background:${low?'#B42318':'#2E7D4F'}"></div></div><b>${oh}</b></div>`;
+  }).join("") || "<p class='muted'>No items.</p>";
 }
 function renderSales() {
   const rows = [...st().sales].reverse().slice(0,200);
@@ -706,6 +729,39 @@ function renderClose() {
     "<p><b>Bayad type</b></p>"+bar("Cash",cash,payMax)+bar("GCash",gc,payMax)+bar("Other",oth,payMax)+
     "<p style='margin-top:12px'><b>By cashier</b></p>"+(Object.keys(byWho).length?Object.entries(byWho).map(([w,v])=>bar(w,v,whoMax)).join(""):"<p class='muted'>(none)</p>")+
     "<p style='margin-top:12px'><b>Top items</b></p>"+(Object.keys(by).length?Object.entries(by).sort((a,c)=>c[1].peso-a[1].peso).slice(0,8).map(([,v])=>bar(v.name,v.peso,itemMax)).join(""):"<p class='muted'>(none)</p>");
+  drawSalesSpark(from, to);
+}
+function drawSalesSpark(from, to) {
+  const cv = $("salesSpark");
+  if (!cv) return;
+  const ctx = cv.getContext("2d");
+  const days = [];
+  let d = from;
+  while (d <= to) { days.push(d); d = addDays(d, 1); if (days.length>62) break; }
+  const vals = days.map(day => st().sales.filter(s=>s.date===day).reduce((a,s)=>a+Number(s.line),0));
+  const w = cv.width, h = cv.height;
+  ctx.fillStyle = "#10261e"; ctx.fillRect(0,0,w,h);
+  const max = Math.max(1, ...vals);
+  const pad = 28;
+  ctx.strokeStyle = "#3d6b54"; ctx.lineWidth = 1;
+  for (let i=0;i<4;i++) {
+    const y = pad + i*(h-2*pad)/3;
+    ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(w-pad,y); ctx.stroke();
+  }
+  if (vals.length) {
+    ctx.beginPath();
+    vals.forEach((v,i) => {
+      const x = pad + (days.length===1? (w-2*pad)/2 : i*(w-2*pad)/(days.length-1));
+      const y = h-pad - (v/max)*(h-2*pad);
+      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.strokeStyle = "#C9A227"; ctx.lineWidth = 3; ctx.stroke();
+    const last = vals[vals.length-1];
+    const first = vals[0];
+    const up = last >= first;
+    $("sparkLbl").textContent = "Daily sales · "+peso(last)+" last day · "+(up?"▲":"▼")+" vs first day · "+storeName(DB.current);
+    $("sparkLbl").style.color = up ? "#0F7B4A" : "#B42318";
+  }
 }
 $("cFrom").onchange = $("cTo").onchange = $("cCount").oninput = renderClose;
 $("cFloat").oninput = () => {
