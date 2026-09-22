@@ -351,6 +351,20 @@ const SEED = [
   {code:"LINE50",name:"Fishing line 50m",cat:"Fishing supplies",unit:"pc",cost:35,price:55,reo:3,start:8,keys:"line,nylon,fishing,pisi"},
   {code:"SINK",name:"Sinker / lead weight",cat:"Fishing supplies",unit:"pc",cost:8,price:15,reo:8,start:20,keys:"sinker,tingga,weight,fishing"},
   {code:"BAIT",name:"Dried bait / pain",cat:"Fishing supplies",unit:"pack",cost:12,price:20,reo:5,start:12,keys:"bait,pain,fishing"},
+  {code:"COKE8",name:"Coke Mismo / 8oz bottle",cat:"Groceries",unit:"btl",cost:16,price:22,reo:24,start:48,keys:"coke,kola,mismo,red,softdrinks,bote"},
+  {code:"COKE15",name:"Coke 1.5L",cat:"Groceries",unit:"btl",cost:62,price:78,reo:6,start:12,keys:"coke,liter,1.5,family"},
+  {code:"COKECS",name:"Coke crate (24 bottles)",cat:"Groceries",unit:"crate",cost:380,price:480,reo:2,start:8,keys:"coke,crate,case,kahon"},
+  {code:"PEPSI8",name:"Pepsi bottle",cat:"Groceries",unit:"btl",cost:16,price:22,reo:24,start:48,keys:"pepsi,kola,blue"},
+  {code:"RC8",name:"RC Cola bottle",cat:"Groceries",unit:"btl",cost:14,price:20,reo:24,start:36,keys:"rc,cola,kola"},
+  {code:"C2-500",name:"C2 Apple 500ml",cat:"Groceries",unit:"btl",cost:20,price:28,reo:8,start:18,keys:"c2,apple,juice"},
+  {code:"WAT500",name:"Nature Spring 500ml",cat:"Groceries",unit:"btl",cost:10,price:16,reo:12,start:24,keys:"water,tubig,nature"},
+  {code:"SML330",name:"San Mig Light 330ml",cat:"Groceries",unit:"btl",cost:38,price:52,reo:8,start:24,keys:"san mig,beer,light,sm"},
+  {code:"SM-PALE",name:"San Mig Pale Pilsen",cat:"Groceries",unit:"btl",cost:38,price:52,reo:8,start:24,keys:"san mig,beer,pale,pilsen"},
+  {code:"RH330",name:"Red Horse 330ml",cat:"Groceries",unit:"btl",cost:42,price:58,reo:8,start:24,keys:"red horse,beer,kabayo"},
+  {code:"LM-PC",name:"Lucky Me Pancit Canton",cat:"Groceries",unit:"pack",cost:14,price:20,reo:10,start:30,keys:"lucky,canton,noodles,pancit"},
+  {code:"NOVA",name:"Nova Country Cheddar",cat:"Groceries",unit:"pack",cost:18,price:25,reo:8,start:15,keys:"nova,chips,chichirya"},
+  {code:"KPK78",name:"Kopiko 78",cat:"Groceries",unit:"cup",cost:18,price:28,reo:6,start:12,keys:"kopiko,kape,coffee"},
+  {code:"EMPTY",name:"Empty bottle / bote return",cat:"Groceries",unit:"btl",cost:0,price:0,reo:0,start:0,keys:"bote,empty,return,blangko"},
   {code:"YUM-HD",name:"Yum Shots Hotdog",cat:"Groceries",unit:"stick",cost:0,price:2,reo:0,start:0,keys:"yum shots, hotdog, meryenda, stick",photo:""},
   {code:"YUM-TO",name:"Yum Shots Tomato",cat:"Groceries",unit:"stick",cost:0,price:2,reo:0,start:0,keys:"yum shots, tomato, meryenda, stick",photo:""},
   {code:"CHUMZ",name:"Chumz Cheese Ring",cat:"Groceries",unit:"stick",cost:0,price:2,reo:0,start:0,keys:"chumz, cheese ring, meryenda, stick",photo:""},
@@ -460,7 +474,6 @@ const SEED = [
   {code:"COWB-S",name:"Cow Bell Condensada small",cat:"Groceries",unit:"pc",cost:0,price:28,reo:0,start:0,keys:"cowbell small, condensada",photo:""},
   {code:"COWB-L",name:"Cow Bell Condensarap big",cat:"Groceries",unit:"pc",cost:0,price:55,reo:0,start:0,keys:"cowbell, condensarap",photo:""}
 ];
-const GROC_PLACEHOLDERS = new Set(["COKE8","COKE15","COKECS","PEPSI8","RC8","C2-500","WAT500","SML330","SM-PALE","RH330","LM-PC","NOVA","KPK78","EMPTY"]);
 const GROC_REFRESH = new Set(["YUM-HD","YUM-TO","CHUMZ","FISHCK","BAWANG","ALI-SW","ALI-BBQ","MUNCH-R","MUNCH-G","BANGUS","STAR-M","RENO","LC-HAM","LC-CHK","LC-TUN","LC-BAC","ALASKA-S","BEAR-S","NES-CW","NES-ORG","NES-40","KOP-BR","KOP-BL","KOP-BK","GT-W","GT-CH","GT-PREM","GT-GRAN","CM-150","CM-220","OATS-WG","OATS-QC","EDEN","CREAM-N","BEAR-P","ALA-300","ALA-840","KT-400","KT-220","KT-150","BONNA","BONAKID","NIDO","CAL-1KG","CAL-BOX","CORN-R","CORN-GH","SODA","SOJU","PABLO","FUND","ALF-L","GINEBRA","FIESTA","TODAYS","DM-CORN","UFC-CORN","MUSH","UFC-PEA","NATA","KAONG","DM-CHK","DM-CRU","DM-SLI","ARG-LOAF","ARG-SAU","ARG-GIN","CDO-KN","FRESCA","TIGA","UNIPAK","HOKK","YT-CB","YT-SAR","YT-HOT","SM-CHILI","SM-CORN","CENT","MALING","KNORR","MAGIC","SWAN-1L","SWAN-4L","SWAN-200","SWAN-PET","DP-VIN1","DP-SOY1","DP-SOY2","DP-VIN2","DP-PET","LORINS","PALM-1.5","UFC-KET","PAPA-KET","MT-SAR","DM-ORG","DM-FIL","PAPA-P","UFC-P","MT-P","DM-CHILI","UFC-CHILI","ALA-EVA","ALA-CLA","ALA-CON","COWBELL","COWB-S","COWB-L"]);
 
 const $ = id => document.getElementById(id);
@@ -540,7 +553,6 @@ function load() {
         for (let i = hits.length - 1; i >= 1; i--) book.catalog.splice(hits[i], 1);
       }
     });
-    if (s.id==="groc") d.stores.groc.catalog = d.stores.groc.catalog.filter(c => !GROC_PLACEHOLDERS.has(c.code));
   });
   if (!d.staff || (d.staff.length===2 && d.staff[0].name==="Nanay" && d.staff[1].name==="JC")) {
     d.staff = [{name:"Claire", pin:"0000"}];
