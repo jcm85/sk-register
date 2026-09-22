@@ -63,14 +63,33 @@ input.ylw, select.ylw { background:var(--ylw); }
 .reg-layout {
   display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; align-items:start;
 }
-@media (min-width:901px) {
-  .reg-side { position:sticky; top:128px; max-height:calc(100vh - 140px); overflow:auto; }
+.reg-side {
+  position:sticky; top:128px;
+  height:calc(100vh - 140px);
+  height:calc(100dvh - 140px);
+  display:flex; flex-direction:column; gap:10px;
+  overflow:hidden;
 }
-@media (max-width:900px) {
-  .reg-layout { display:flex; flex-direction:column; }
-  .reg-side { display:contents; }
-  .cart-card { order:-1; position:sticky; top:128px; z-index:18; box-shadow:0 8px 16px rgba(0,0,0,.08); }
-  #cart { max-height:150px; }
+.reg-side > .card { margin-bottom:0; }
+.cart-card {
+  flex:1 1 auto; min-height:140px;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+#saleMeta {
+  flex:0 1 auto; min-height:0; overflow:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.pay-card { flex:0 0 auto; margin-bottom:0; }
+@media (max-height:900px) {
+  .reg-side .sale-grid { gap:8px 12px; }
+  .reg-side label { margin:4px 0 4px; font-size:13px; }
+  .reg-side input, .reg-side select {
+    min-height:48px; font-size:18px; padding:8px 12px;
+  }
+  .reg-side .money { font-size:24px; min-height:44px; }
+  .reg-side .card { padding:12px; }
+  .pay-card .btn-a { margin-top:8px; min-height:56px; font-size:20px; }
+  .cart-card { min-height:120px; }
 }
 .sale-grid {
   display:grid; grid-template-columns:1fr 1fr; gap:14px 16px; align-items:end;
@@ -84,15 +103,11 @@ input.ylw, select.ylw { background:var(--ylw); }
   font-size:30px; font-weight:800; line-height:1.1; min-height:56px;
   display:flex; align-items:center; white-space:nowrap;
 }
-.pay-card { margin-bottom:0; }
-.pay-card .btn-a { margin-top:16px; }
+.pay-card .btn-a { margin-top:12px; }
 .cart-head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px; }
 .cart-head b { font-size:22px; }
-#cart { max-height:240px; overflow:auto; -webkit-overflow-scrolling:touch; }
+#cart { flex:1 1 auto; min-height:0; overflow:auto; -webkit-overflow-scrolling:touch; }
 #cart .line { grid-template-columns:1.4fr .7fr .9fr auto; }
-@media (max-width:900px) {
-  .reg-layout { grid-template-columns:1fr; }
-}
 .btn {
   border:0; border-radius:14px; padding:18px 16px; font-weight:800; font-size:20px; width:100%;
   min-height:56px;
@@ -924,6 +939,7 @@ function searchItems(q) {
   q = (q||"").trim().toLowerCase();
   let list = allItems();
   if (listFilter) list = list.filter(c => c.store===listFilter);
+  else list = list.filter(c => !(isFuel(c) && Number(c.price) <= 0));
   if (!q && !listFilter) {
     const mix = [];
     STORES.forEach(s => mix.push(...list.filter(c => c.store===s.id).slice(0, 4)));
