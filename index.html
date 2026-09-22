@@ -99,6 +99,8 @@ input.ylw, select.ylw { background:var(--ylw); }
 table { width:100%; border-collapse:collapse; font-size:16px; }
 th { text-align:left; background:var(--g2); color:#fff; padding:10px; font-size:15px; }
 td { padding:10px; border-bottom:1px solid #eee; }
+#catTable tr[data-code] { cursor:pointer; }
+#catTable tr.pick { background:var(--ylw); }
 #rCashierName { font-size:22px; }
 #lock {
   display:none; position:fixed; inset:0; background:rgba(27,77,62,.94); z-index:80;
@@ -210,7 +212,12 @@ td { padding:10px; border-bottom:1px solid #eee; }
 
 <section class="page" id="cat">
   <div class="card">
-    <p class="muted">Yellow-style fields: edit price and StartStock. Add a row for new items from her photos.</p>
+    <label>Category</label>
+    <div class="chips" id="catStoreChips"></div>
+    <p class="muted" id="catStoreNote">Tap an item to change price, reorder, or keywords.</p>
+  </div>
+  <div class="card" id="itemForm">
+    <p class="muted">Tap an item in the list. Change price, reorder, keywords, or photo, then save.</p>
     <div class="row">
       <div><label>Code</label><input id="nCode" class="ylw" placeholder="PEPSI8"></div>
       <div><label>Name</label><input id="nName" class="ylw" placeholder="Pepsi bottle"></div>
@@ -234,7 +241,8 @@ td { padding:10px; border-bottom:1px solid #eee; }
     <label>Picture / larawan (iPad camera or photo library)</label>
     <input id="nPhoto" type="file" accept="image/*" capture="environment">
     <p class="muted" id="nPhotoMsg"></p>
-    <button class="btn btn-g" id="addItemBtn" style="margin-top:8px">Add / update item</button>
+    <button class="btn btn-g" id="addItemBtn" style="margin-top:8px">Add item</button>
+    <button class="btn btn-ghost" id="itemCancel" type="button" style="display:none;margin-top:8px">Cancel</button>
   </div>
   <div class="card" style="overflow:auto"><table id="catTable"></table></div>
 </section>
@@ -541,18 +549,14 @@ function load() {
       const hits = [];
       book.catalog.forEach((c,i) => { if (c.code===item.code) hits.push(i); });
       if (!hits.length) { book.catalog.push(item); return; }
-      if (s.id==="groc" && GROC_REFRESH.has(item.code)) {
-        const keep = book.catalog[hits[0]];
-        keep.name = item.name;
-        keep.keys = item.keys;
-        keep.price = item.price;
+      if (hits.length > 1) {
         for (let i = hits.length - 1; i >= 1; i--) book.catalog.splice(hits[i], 1);
       }
     });
     if (s.id==="gas") {
-      const fuel = new Set(["UNL","PUNL"]);
-      d.stores.gas.catalog = d.stores.gas.catalog.filter(c => fuel.has(c.code));
-      d.stores.gas.catalog.forEach(c => { c.unit = "L"; });
+      const gone = new Set(["MRB-RD","FRT-RD","MTY-RD","OIL2T","LOAD50","LOAD100"]);
+      d.stores.gas.catalog = d.stores.gas.catalog.filter(c => !gone.has(c.code));
+      d.stores.gas.catalog.forEach(c => { if (c.code==="UNL" || c.code==="PUNL") c.unit = "L"; });
     }
   });
   if (!d.staff || (d.staff.length===2 && d.staff[0].name==="Nanay" && d.staff[1].name==="JC")) {
@@ -795,44 +799,127 @@ function shrinkPhoto(file) {
   });
 }
 
+let editingCode = null;
+let editingStore = null;
+function esc(s) {
+  return String(s??"").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));
+}
+function storeIdByName(name) {
+  const s = STORES.find(x => x.name===name);
+  return s ? s.id : DB.current;
+}
+function setCurrentStore(id) {
+  if (!DB.stores[id] || DB.current===id) return;
+  DB.current = id;
+  if (editingStore && editingStore!==id) clearItemForm();
+  else if (!editingCode && id==="gas") $("nUnit").value = "L";
+  save();
+  applySession();
+  renderAll();
+}
+function fillStoreChips(host) {
+  if (!host) return;
+  host.innerHTML = STORES.map(s =>
+    `<button type="button" data-sid="${s.id}" style="${s.id===DB.current?'outline:3px solid #C9A227':''}">${s.name}</button>`
+  ).join("");
+  host.querySelectorAll("button").forEach(b => b.onclick = () => setCurrentStore(b.dataset.sid));
+}
+function clearItemForm() {
+  editingCode = null;
+  editingStore = null;
+  $("nCode").value = "";
+  $("nName").value = "";
+  $("nPrice").value = "";
+  $("nCost").value = "";
+  $("nKeys").value = "";
+  $("nStart").value = "0";
+  $("nReo").value = "5";
+  $("nPhoto").value = "";
+  $("nPhotoMsg").textContent = "";
+  $("addItemBtn").textContent = "Add item";
+  $("itemCancel").style.display = "none";
+  const s = STORES.find(x => x.id===DB.current);
+  if (s) $("nCat").value = s.name;
+  if (DB.current==="gas") $("nUnit").value = "L";
+}
+function openItem(c, storeId) {
+  editingCode = c.code;
+  editingStore = storeId || DB.current;
+  $("nCode").value = c.code || "";
+  $("nName").value = c.name || "";
+  if ([...$("nCat").options].some(o => o.text===c.cat)) $("nCat").value = c.cat;
+  if ([...$("nUnit").options].some(o => o.text===c.unit)) $("nUnit").value = c.unit || "pc";
+  $("nPrice").value = c.price ?? "";
+  $("nCost").value = c.cost ?? 0;
+  $("nStart").value = c.start ?? 0;
+  $("nReo").value = c.reo ?? 0;
+  $("nKeys").value = c.keys || "";
+  $("nPhoto").value = "";
+  $("nPhotoMsg").textContent = c.photo ? "Current photo stays unless you choose a new one." : "No photo yet.";
+  $("addItemBtn").textContent = "Save changes";
+  $("itemCancel").style.display = "block";
+  renderCat();
+  $("itemForm").scrollIntoView({behavior:"smooth", block:"start"});
+}
 function renderCat() {
-  $("catTable").innerHTML = "<tr><th></th><th>Code</th><th>Name</th><th>Presyo</th><th>Start</th></tr>" +
-    st().catalog.map((c,i)=>`<tr>
+  fillStoreChips($("catStoreChips"));
+  const cur = STORES.find(x => x.id===DB.current);
+  $("catStoreNote").textContent = "Showing " + (cur ? cur.name : "this category") + ". Tap an item to change price, reorder, or keywords.";
+  $("catTable").innerHTML = "<tr><th></th><th>Code</th><th>Name</th><th>Presyo</th><th>Reorder</th></tr>" +
+    st().catalog.map(c => `<tr data-code="${esc(c.code)}" class="${editingCode===c.code&&editingStore===DB.current?'pick':''}">
       <td>${c.photo?`<img class="thumb" src="${c.photo}">`:""}</td>
-      <td>${c.code}</td><td>${c.name}<div class="muted">${c.cat} · ${c.unit}</div></td>
-      <td><input data-p="${i}" type="number" step="0.01" value="${c.price}" style="width:90px"></td>
-      <td><input data-s="${i}" type="number" value="${c.start}" style="width:70px"></td>
+      <td>${esc(c.code)}</td>
+      <td>${esc(c.name)}<div class="muted">${esc(c.unit||"")}${c.keys?" · "+esc(c.keys):""}</div></td>
+      <td>${peso(c.price)}</td>
+      <td>${esc(c.reo??0)}</td>
       </tr>`).join("");
-  $("catTable").querySelectorAll("[data-p]").forEach(inp => inp.onchange = () => {
-    st().catalog[+inp.dataset.p].price = Number(inp.value); save();
-  });
-  $("catTable").querySelectorAll("[data-s]").forEach(inp => inp.onchange = () => {
-    st().catalog[+inp.dataset.s].start = Number(inp.value); save(); renderStock();
+  $("catTable").querySelectorAll("tr[data-code]").forEach(tr => tr.onclick = () => {
+    const c = st().catalog.find(x => x.code===tr.dataset.code);
+    if (c) openItem(c, DB.current);
   });
 }
 $("nPhoto").onchange = () => {
-  $("nPhotoMsg").textContent = $("nPhoto").files[0] ? "Photo ready — tap Add / update item" : "";
+  $("nPhotoMsg").textContent = $("nPhoto").files[0] ? "Photo ready — tap Save" : ($("nPhotoMsg").textContent||"");
 };
+$("itemCancel").onclick = () => { clearItemForm(); renderCat(); };
 $("addItemBtn").onclick = async () => {
   const code = $("nCode").value.trim().toUpperCase();
-  if (!code || !$("nName").value) { alert("Need code and name"); return; }
-  const old = st().catalog.find(c=>c.code===code);
-  let photo = old && old.photo ? old.photo : "";
+  if (!code || !$("nName").value.trim()) { alert("Need code and name"); return; }
+  const srcId = editingStore || DB.current;
+  const destId = storeIdByName($("nCat").value);
+  const src = DB.stores[srcId].catalog;
+  const oldCode = editingCode;
+  const ix = src.findIndex(c => c.code===(oldCode || code));
+  const prev = ix>=0 ? src[ix] : null;
+  if ((!prev || prev.code!==code) && DB.stores[destId].catalog.some(c => c.code===code && !(srcId===destId && prev && prev.code===code))) {
+    alert(code+" is already in "+storeName(destId));
+    return;
+  }
+  let photo = prev && prev.photo ? prev.photo : "";
   if ($("nPhoto").files[0]) {
     try { photo = await shrinkPhoto($("nPhoto").files[0]); }
     catch(e) { alert("Could not read photo"); return; }
   }
   const row = {
-    code, name:$("nName").value, cat:$("nCat").value, unit:$("nUnit").value,
+    code, name:$("nName").value.trim(), cat:$("nCat").value, unit:$("nUnit").value,
     cost:Number($("nCost").value||0), price:Number($("nPrice").value||0),
     reo:Number($("nReo").value||0), start:Number($("nStart").value||0),
-    keys:($("nKeys").value||"").toLowerCase(), photo, active:true
+    keys:($("nKeys").value||"").toLowerCase(), photo, active: prev ? prev.active!==false : true
   };
-  const ix = st().catalog.findIndex(c=>c.code===code);
-  if (ix>=0) st().catalog[ix] = row; else st().catalog.push(row);
-  save(); renderCat(); renderStock(); renderHits();
-  $("nCode").value=$("nName").value=$("nPrice").value=$("nKeys").value="";
-  $("nPhoto").value=""; $("nPhotoMsg").textContent="Saved picture on "+code;
+  if (oldCode && oldCode!==code) {
+    (DB.stores[srcId].sales||[]).forEach(s => { if (s.code===oldCode) s.code = code; });
+  }
+  if (destId!==srcId) {
+    if (ix>=0) src.splice(ix, 1);
+    const dest = DB.stores[destId].catalog;
+    const dix = dest.findIndex(c => c.code===code);
+    if (dix>=0) dest[dix] = row; else dest.push(row);
+  } else if (ix>=0) src[ix] = row;
+  else src.push(row);
+  save();
+  clearItemForm();
+  renderCat(); renderStock(); renderHits();
+  $("nPhotoMsg").textContent = "Saved "+code;
 };
 
 function renderStock() {
@@ -1071,7 +1158,7 @@ function renderSet() {
     if (mgr !== DB.mgrPin) { alert("Wrong Manager PIN"); return; }
     DB.staff.splice(+b.dataset.d,1); save(); renderSet();
   });
-  if ($("nCat")) {
+  if ($("nCat") && !editingCode) {
     const name = s ? s.name : "Groceries";
     $("nCat").value = name;
   }
