@@ -50,7 +50,13 @@ input.ylw, select.ylw { background:var(--ylw); }
   display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; align-items:start;
 }
 @media (min-width:901px) {
-  .reg-side { position:sticky; top:128px; }
+  .reg-side { position:sticky; top:128px; max-height:calc(100vh - 140px); overflow:auto; }
+}
+@media (max-width:900px) {
+  .reg-layout { display:flex; flex-direction:column; }
+  .reg-side { display:contents; }
+  .cart-card { order:-1; position:sticky; top:128px; z-index:18; box-shadow:0 8px 16px rgba(0,0,0,.08); }
+  #cart { max-height:150px; }
 }
 .sale-grid {
   display:grid; grid-template-columns:1fr 1fr; gap:14px 16px; align-items:end;
@@ -66,6 +72,10 @@ input.ylw, select.ylw { background:var(--ylw); }
 }
 .pay-card { margin-bottom:0; }
 .pay-card .btn-a { margin-top:16px; }
+.cart-head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px; }
+.cart-head b { font-size:22px; }
+#cart { max-height:240px; overflow:auto; -webkit-overflow-scrolling:touch; }
+#cart .line { grid-template-columns:1.4fr .7fr .9fr auto; }
 @media (max-width:900px) {
   .reg-layout { grid-template-columns:1fr; }
 }
@@ -154,9 +164,12 @@ td { padding:10px; border-bottom:1px solid #eee; }
       <div class="chips" id="catChips"></div>
       <p class="muted">Tap a category. Set the quantity beside the item, then tap Add.</p>
       <div id="hits"></div>
-      <div id="cart"></div>
     </div>
     <div class="reg-side">
+      <div class="card cart-card">
+        <div class="cart-head"><b>Cart</b><b id="cartTotal">₱0.00</b></div>
+        <div id="cart"></div>
+      </div>
       <div class="card">
         <div class="sale-grid">
           <div class="field">
@@ -777,16 +790,18 @@ function renderCart() {
   const el = $("cart");
   if (!DB.cart.length) { el.innerHTML = '<p class="muted">Cart empty. Magdagdag ng item.</p>'; }
   else {
-    el.innerHTML = DB.cart.map((l,i) => {
-      const photo = (findItem(l.code, l.store)||{}).photo;
-      return `<div class="line"><div>${photo?`<img class="thumb" src="${photo}" style="width:36px;height:36px;vertical-align:middle;margin-right:6px">`:""}<b>${l.name}</b><div class="muted">${l.cat||""}</div></div>
-       <div>${peso(l.price)}${isFuel(l)?"/L":""}</div><div>${isFuel(l)?Number(l.qty).toLocaleString("en-PH",{maximumFractionDigits:2})+" L":"×"+l.qty}</div>
-       <div><b>${peso(l.price*l.qty)}</b> <button data-x="${i}" class="btn-ghost" style="padding:4px 8px;border:0;border-radius:6px">✕</button></div></div>`;
+    el.innerHTML = `<div class="line"><span class="muted">Item</span><span class="muted">Qty</span><span class="muted">Total</span><span></span></div>` +
+      DB.cart.map((l,i) => {
+      return `<div class="line"><div><b>${esc(l.name)}</b><div class="muted">${peso(l.price)}${isFuel(l)?"/L":""}</div></div>
+       <div>${isFuel(l)?Number(l.qty).toLocaleString("en-PH",{maximumFractionDigits:2})+" L":"×"+l.qty}</div>
+       <div><b>${peso(l.price*l.qty)}</b></div>
+       <button data-x="${i}" class="btn-ghost" style="padding:4px 8px;border:0;border-radius:6px">✕</button></div>`;
     }).join("");
     el.querySelectorAll("[data-x]").forEach(b => b.onclick = () => { DB.cart.splice(+b.dataset.x,1); save(); renderCart(); });
   }
   const sub = DB.cart.reduce((a,l)=>a+l.price*l.qty,0);
   $("subtotal").textContent = peso(sub);
+  if ($("cartTotal")) $("cartTotal").textContent = peso(sub);
   const tend = Number($("rTend").value||0);
   const ch = tend ? tend-sub : 0;
   $("change").textContent = peso(tend ? ch : 0);

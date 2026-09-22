@@ -1,4 +1,4 @@
-const CACHE = "sk-v21";
+const CACHE = "sk-v22";
 self.addEventListener("install", e => {
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(["./", "./index.html", "./manifest.json"])));
