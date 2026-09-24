@@ -601,7 +601,10 @@ body.lock-on { overflow:hidden; }
       <div><label>Reorder</label><input id="nReo" class="ylw" type="number" value="5"></div>
     </div>
     <label>Keywords / ibang tawag (comma)</label>
-    <input id="nKeys" class="ylw" placeholder="coke, kola, mismo, red">
+    <div class="search-row">
+      <input id="nKeys" class="ylw" placeholder="coke, kola, mismo, red">
+      <button type="button" class="btn btn-ghost" id="nKeysFill">Fill keywords</button>
+    </div>
     <label id="nFavWrap"><input id="nFav" type="checkbox"> Favorite / Mabilis (star on Register)</label>
     <div id="itemStockActs" style="display:none">
       <label>Dumating / Receive stock</label>
@@ -1631,6 +1634,130 @@ function refreshSuggestedCode() {
   if (!name) { if ($("nCode")) $("nCode").value = ""; return; }
   $("nCode").value = suggestCode(name, $("nUnit").value, DB.current);
 }
+/** Offline keyword list from name + unit (EN + local/store words). Brand is always included. Never milkfish for bangus. */
+const KEY_EXPAND = {
+  coke:["coke","kola","cola","softdrinks","soda"], coca:["coke","kola","cola","softdrinks"],
+  pepsi:["pepsi","kola","cola","softdrinks"], rc:["rc","cola","kola","softdrinks"],
+  royal:["royal","softdrinks","soda"], sprite:["sprite","softdrinks","soda"],
+  fanta:["fanta","softdrinks","soda"], mirinda:["mirinda","softdrinks","soda"],
+  orange:["orange"], grape:["grape"], lemon:["lemon"], strawberry:["strawberry"],
+  mismo:["mismo"], softdrink:["softdrinks","soda"], softdrinks:["softdrinks","soda"], soda:["soda","softdrinks"],
+  water:["water","tubig"], tubig:["tubig","water"], nature:["nature","water","tubig"],
+  beer:["beer"], pale:["pale","beer"], pilsen:["pilsen","beer"],
+  horse:["red horse","beer","kabayo"], kabayo:["kabayo","beer"],
+  lucky:["lucky","noodles","pancit"], pancit:["pancit","noodles"], canton:["canton","noodles","pancit"],
+  noodles:["noodles","pancit"], nova:["nova","chips","chichirya"], chips:["chips","chichirya"], chichirya:["chichirya","chips"],
+  kopiko:["kopiko","kape","coffee"], coffee:["coffee","kape"], kape:["kape","coffee"], nescafe:["nescafe","kape","coffee"],
+  cream:["cream","krema"], creamer:["creamer"], coffeemate:["coffeemate","creamer"],
+  milk:["milk","gatas"], gatas:["gatas","milk"], condensed:["condensada","milk","gatas"], condensada:["condensada","gatas"],
+  evaporated:["evaporated","gatas"], powdered:["powdered","gatas"], alaska:["alaska","gatas"], bear:["bear brand","gatas"],
+  cheese:["cheese","keso"], keso:["keso","cheese"], margarine:["margarine","margarina"], margarina:["margarina","margarine"],
+  snack:["snack","meryenda"], meryenda:["meryenda","snack"], crackers:["crackers","snack"],
+  bangus:["bangus","fish crackers","snack"], fish:["fish"],
+  hotdog:["hotdog","meryenda"], tomato:["tomato"], corn:["corn","mais"], mais:["mais","corn"],
+  barbecue:["barbecue"], spicy:["spicy"], garlic:["garlic","bawang"], bawang:["bawang","garlic"],
+  soy:["soy sauce","toyo"], toyo:["toyo","soy sauce"], vinegar:["vinegar","suka"], suka:["suka","vinegar"],
+  ketchup:["ketchup","catsup"], oil:["oil","mantika"], mantika:["mantika","oil"],
+  sauce:["sauce"], chili:["chili"], tuna:["tuna"], sardines:["sardines"],
+  liquor:["liquor","alak"], alcohol:["alcohol","alak"], alak:["alak"], gin:["gin","alak"], brandy:["brandy","alak"],
+  hook:["hook","kawit","fishing"], kawit:["kawit","hook","fishing"], line:["line","nylon","pisi","fishing"],
+  sinker:["sinker","tingga","fishing"], tingga:["tingga","sinker"], bait:["bait","pain","fishing"], pain:["pain","bait"],
+  fishing:["fishing","bingwit"], unleaded:["unleaded","gas","gasoline"], premium:["premium","unleaded","gas"],
+  gasoline:["gas","gasoline"], gas:["gas","gasoline"],
+  bottle:["bote","bottle"], bote:["bote","bottle"], empty:["empty","bote","return"], return:["return","bote"],
+  crate:["crate","case","kahon"], case:["case","crate","kahon"], kahon:["kahon","crate"],
+  pack:["pack"], sachet:["sachet"], stick:["stick","meryenda"], pouch:["pouch"],
+  spread:["spread","palaman"], palaman:["palaman","spread"], liver:["liver","palaman"],
+  oatmeal:["oatmeal","oats"], oats:["oats","oatmeal"], formula:["formula","gatas"], infant:["infant","gatas"],
+  baking:["baking"], powder:["powder"], cornstarch:["cornstarch","gawgaw"], gawgaw:["gawgaw","cornstarch"]
+};
+const KEY_UNIT = {
+  btl:["bote","bottle"], pack:["pack"], crate:["crate","kahon","case"], pc:["pc"],
+  sachet:["sachet"], cup:["cup"], can:["can"], L:["liter"], stick:["stick","meryenda"]
+};
+const KEY_STOP = new Set(["a","an","the","of","and","or","na","nang","sa","in","with","for","style","all","purpose",
+  "fortified","original","classic","whole","pure","shots","jumbo","bundle","tub","box","twin","return","blangko",
+  "empty","ml","oz","kg","g","m"]);
+function pushKey(out, have, w) {
+  const t = String(w||"").trim().toLowerCase().replace(/\s+/g," ");
+  if (!t || t==="milkfish") return;
+  if (have.has(t)) return;
+  have.add(t); out.push(t);
+}
+function expandKeyToken(tok, out, have) {
+  const t = String(tok||"").toLowerCase();
+  if (!t) return;
+  if (t==="milkfish") return;
+  // Bangus crackers: English is fish crackers/snack — never milkfish (milk search must not hit it).
+  if (t==="bangus") {
+    pushKey(out, have, "bangus");
+    pushKey(out, have, "fish crackers");
+    pushKey(out, have, "snack");
+    return;
+  }
+  pushKey(out, have, t);
+  const syn = KEY_EXPAND[t];
+  if (syn) syn.forEach(s => pushKey(out, have, s));
+}
+function suggestKeys(name, unit) {
+  const raw = String(name||"").trim();
+  if (!raw) return "";
+  const out = [];
+  const have = new Set();
+  // Split on spaces / hyphens so "Tru-Orange" and "Lucky Me" yield brand + product words.
+  let parts = raw.split(/[\s\/,]+/).map(w => w.replace(/^[^a-zA-Z0-9#+.]+|[^a-zA-Z0-9#+.]+$/g, "")).filter(Boolean);
+  const tokens = [];
+  parts.forEach(p => {
+    String(p).split(/[-_]+/).forEach(bit => {
+      const b = bit.replace(/^[^a-zA-Z0-9#+.]+|[^a-zA-Z0-9#+.]+$/g, "");
+      if (b) tokens.push(b);
+    });
+  });
+  const words = tokens.filter(w => {
+    const wl = w.toLowerCase();
+    if (KEY_STOP.has(wl)) return false;
+    if (/^\d+(?:\.\d+)?(ml|l|oz|kg|g|m)?$/i.test(w)) return false;
+    if (/^#?\d+$/.test(w)) return false;
+    return true;
+  });
+  // First word is usually the brand — always keep it as its own keyword.
+  words.forEach((w, i) => {
+    const wl = w.toLowerCase();
+    if (i===0) pushKey(out, have, wl);
+    expandKeyToken(wl, out, have);
+  });
+  // Multi-word brands people search as a phrase
+  const lower = raw.toLowerCase();
+  if (/\blucky\s+me\b/.test(lower)) pushKey(out, have, "lucky me");
+  if (/\bsan\s+mig(?:uel)?\b/.test(lower)) pushKey(out, have, "san mig");
+  if (/\bbear\s+brand\b/.test(lower)) pushKey(out, have, "bear brand");
+  if (/\bgreat\s+taste\b/.test(lower)) pushKey(out, have, "great taste");
+  if (/\bdel\s+monte\b/.test(lower)) pushKey(out, have, "del monte");
+  if (/\blady'?s?\s+choice\b/.test(lower)) pushKey(out, have, "ladies choice");
+  if (/\bred\s+horse\b/.test(lower)) pushKey(out, have, "red horse");
+  if (/\bnature\s+spring\b/.test(lower)) pushKey(out, have, "nature");
+  if (/\bcoke\b|\bcoca/.test(lower) || /\bpepsi\b|\brc\b|\broyal\b|\bsprite\b/.test(lower)) {
+    pushKey(out, have, "softdrinks");
+    pushKey(out, have, "soda");
+  }
+  (KEY_UNIT[unit] || []).forEach(s => pushKey(out, have, s));
+  return out.join(", ");
+}
+function refreshSuggestedKeys(force) {
+  if (editingCode) return;
+  if (!force && keysHandEdited) return;
+  const name = ($("nName") && $("nName").value || "").trim();
+  if (!name) {
+    if (!keysHandEdited && $("nKeys")) $("nKeys").value = "";
+    return;
+  }
+  const suggested = suggestKeys(name, $("nUnit") && $("nUnit").value);
+  if (!suggested) return;
+  if (force || !keysHandEdited) {
+    $("nKeys").value = suggested;
+    if (force) keysHandEdited = false;
+  }
+}
 function removedKey(storeId, code) { return storeId+":"+String(code||"").toUpperCase(); }
 function markRemoved(storeId, code) {
   if (!Array.isArray(DB.removed)) DB.removed = [];
@@ -1666,6 +1793,7 @@ function fillStoreChips(host) {
 function clearItemForm() {
   editingCode = null;
   editingStore = null;
+  keysHandEdited = false;
   $("nCode").value = "";
   $("nName").value = "";
   $("nPrice").value = "";
@@ -1767,8 +1895,10 @@ $("itemRemove").onclick = () => {
   renderCat(); renderStock(); renderHits(); renderFavs();
   $("nPhotoMsg").textContent = "Removed "+code;
 };
-$("nName").addEventListener("input", refreshSuggestedCode);
-$("nUnit").addEventListener("change", refreshSuggestedCode);
+$("nName").addEventListener("input", () => { refreshSuggestedCode(); refreshSuggestedKeys(); });
+$("nUnit").addEventListener("change", () => { refreshSuggestedCode(); refreshSuggestedKeys(); });
+$("nKeys").addEventListener("input", () => { keysHandEdited = true; });
+if ($("nKeysFill")) $("nKeysFill").onclick = () => { refreshSuggestedKeys(true); sndTap(); };
 $("addItemBtn").onclick = async () => {
   const name = $("nName").value.trim();
   if (!name) { alert("Need a name"); return; }
@@ -1797,11 +1927,17 @@ $("addItemBtn").onclick = async () => {
     try { photo = await shrinkPhoto($("nPhoto").files[0]); }
     catch(e) { alert("Could not read photo"); return; }
   }
+  // New items: fill empty keywords from name. Editing keeps field text (never wipe typed keys).
+  let keysVal = ($("nKeys").value||"").trim();
+  if (!editingCode && !keysVal) {
+    keysVal = suggestKeys(name, $("nUnit").value);
+    $("nKeys").value = keysVal;
+  }
   const row = {
     code, name, cat:$("nCat").value, unit:$("nUnit").value,
     cost:Number($("nCost").value||0), price:Number($("nPrice").value||0),
     reo:Number($("nReo").value||0), start:Number($("nStart").value||0),
-    keys:($("nKeys").value||"").toLowerCase(), photo, active: prev ? prev.active!==false : true
+    keys:keysVal.toLowerCase(), photo, active: prev ? prev.active!==false : true
   };
   // Codes are read-only — never rename an existing item's code or rewrite sales.
   if (oldCode && destId!==srcId) markRemoved(srcId, oldCode);
