@@ -650,8 +650,11 @@ body.lock-on { overflow:hidden; }
 
 <section class="page" id="close">
   <div class="card">
-    <p><b id="cStoreTitle">S&K report</b></p>
-    <p class="muted">Each store has its own sales book. Switch store, then download that report only.</p>
+    <p><b id="cPageTitle">Ulat ng araw / Day report</b></p>
+    <p class="muted" id="cPageLead">Close day saves one house cash count and downloads three CSV files — one per store. Sales still save after close; run Close again to refresh the three files.</p>
+    <p class="muted" id="cLastClosed">Last closed: —</p>
+    <p><b id="cStoreTitle">S&K report · All stores</b></p>
+    <label>Store filter</label>
     <div class="chips" id="cStoreChips"></div>
     <div class="chips" id="cRangeChips"></div>
     <div class="row">
@@ -659,18 +662,23 @@ body.lock-on { overflow:hidden; }
       <div><label>To</label><input id="cTo" type="date" class="ylw"></div>
     </div>
     <input id="cDate" type="hidden">
+    <p class="muted" id="cCloseHint" style="display:none;color:#B42318">Pick one day: set From and To to the same date.</p>
     <div class="kpi" id="kpis" style="margin-top:10px"></div>
     <canvas id="salesSpark" width="640" height="220" style="width:100%;max-width:100%;height:220px;background:#10261e;border-radius:12px;margin-top:10px"></canvas>
-    <p class="muted" id="sparkLbl">Daily sales — this store</p>
+    <p class="muted" id="sparkLbl">Daily sales — all stores</p>
     <div id="cCharts" style="margin-top:12px"></div>
   </div>
   <div class="card">
-    <label>Opening float ₱ (this store)</label><input id="cFloat" class="ylw" type="number" value="2000">
-    <label>Counted cash at close ₱ (this store)</label><input id="cCount" class="ylw" type="number">
+    <label id="cFloatLbl">Opening float ₱ (house)</label><input id="cFloat" class="ylw" type="number" value="2000">
+    <label id="cCountLbl">Counted cash ₱</label><input id="cCount" class="ylw" type="number">
     <p id="cExpect" class="muted"></p>
-    <button class="btn btn-a" id="repThis" style="margin-top:10px">Download THIS store report</button>
-    <button class="btn btn-g" id="repAll" style="margin-top:8px">Download all 3 store reports</button>
-    <button class="btn btn-ghost" id="repPrint" style="margin-top:8px">Print / screenshot this report</button>
+    <p id="cGCashNote" class="muted"></p>
+    <p id="cCashBreak" class="muted"></p>
+    <button class="btn btn-a" id="closeDayBtn" type="button" style="margin-top:10px">Close day / I-sara ang araw</button>
+    <button class="btn btn-g" id="repAll" type="button" style="margin-top:8px">Download 3 store reports</button>
+    <button class="btn btn-g" id="repThis" type="button" style="margin-top:8px" disabled>Download THIS store report</button>
+    <button class="btn btn-ghost" id="repPrint" type="button" style="margin-top:8px">Print / screenshot this report</button>
+    <p class="ok" id="cDlMsg" style="display:none;margin-top:8px"></p>
   </div>
   <div class="card" style="overflow:auto"><table id="dayItems"></table></div>
 </section>
@@ -1028,6 +1036,8 @@ function load() {
   if (!d.recv || typeof d.recv!=="object") d.recv = {};
   if (!d.opened || typeof d.opened!=="object") d.opened = {};
   if (d.lastRcpt===undefined) d.lastRcpt = null;
+  if (!Array.isArray(d.closes)) d.closes = [];
+  if (d.houseFloat == null) d.houseFloat = 2000;
   seedFavsIfNeeded(d);
   return d;
 }
@@ -1241,6 +1251,7 @@ function haystack(c) {
   return [c.code, c.name, c.cat, c.unit, c.keys||""].join(" ").toLowerCase();
 }
 let listFilter = "";
+let closeFilter = "";
 function searchItems(q) {
   q = (q||"").trim().toLowerCase();
   let list = allItems();
@@ -1407,6 +1418,10 @@ $("saveBtn").onclick = () => {
   updateReprintBtn();
   $("saveMsg").textContent = "Saved resibo #"+rcpt+" · "+[...books].join(", ")+".";
   sndOk();
+  const saleDate = rec.date || today();
+  if ((DB.closes||[]).some(c => c.date === saleDate)) {
+    alert("This day is already closed. Sale is saved; run Close again to refresh the three files.");
+  }
 };
 
 function shrinkPhoto(file) {
@@ -1822,8 +1837,17 @@ function inRange(date, from, to) {
 function linesFor(id, from, to) {
   return (DB.stores[id] && DB.stores[id].sales || []).filter(s => inRange(s.date, from, to));
 }
+function closeLines(from, to) {
+  if (closeFilter) {
+    return linesFor(closeFilter, from, to).map(s => ({...s, store: closeFilter}));
+  }
+  const out = [];
+  STORES.forEach(st => {
+    linesFor(st.id, from, to).forEach(s => out.push({...s, store: st.id}));
+  });
+  return out;
+}
 function reportText(id, from, to) {
-  const s = DB.stores[id] || blankStore(storeName(id));
   const lines = linesFor(id, from, to);
   const rcpts = [...new Set(lines.map(x=>x.receipt))];
   const tot = lines.reduce((a,x)=>a+Number(x.line),0);
@@ -1834,8 +1858,9 @@ function reportText(id, from, to) {
   lines.forEach(x => { const w=x.cashier||"?"; byWho[w]=(byWho[w]||0)+Number(x.line); });
   const by = {};
   lines.forEach(x => { by[x.code]=by[x.code]||{name:x.name,qty:0,peso:0,unit:x.unit||""}; by[x.code].qty+=Number(x.qty); by[x.code].peso+=x.line; });
-  const fl = Number((s.settings&&s.settings.float)||0);
+  const fl = Number(DB.houseFloat != null ? DB.houseFloat : 2000);
   let t = "S&K REGISTER REPORT\n";
+  t += "Ulat ng araw / Day report\n";
   t += "Store: "+storeName(id)+"\n";
   t += "Period: "+from+" to "+to+"\n";
   t += "Generated: "+new Date().toLocaleString()+"\n";
@@ -1845,8 +1870,7 @@ function reportText(id, from, to) {
   t += "Cash: "+peso(cash)+"\n";
   t += "GCash: "+peso(gc)+"\n";
   t += "Other: "+peso(oth)+"\n";
-  t += "Opening float: "+peso(fl)+"\n";
-  t += "Expected cash (float + cash sales): "+peso(fl+cash)+"\n";
+  t += "Opening float (house): "+peso(fl)+"\n";
   t += "--------------------------------\nSALES BY CASHIER\n";
   Object.keys(byWho).forEach(w => { t += w+": "+peso(byWho[w])+"\n"; });
   if (!Object.keys(byWho).length) t += "(none)\n";
@@ -1856,12 +1880,156 @@ function reportText(id, from, to) {
   t += "--------------------------------\nIndependent book — not mixed with other S&K stores.\n";
   return t;
 }
+function csvCell(v) {
+  const s = String(v??"");
+  if (/[",\n\r]/.test(s)) return '"'+s.replace(/"/g,'""')+'"';
+  return s;
+}
+function storeDayTotals(id, day) {
+  const lines = linesFor(id, day, day);
+  const sales = lines.reduce((a,x)=>a+(Number(x.line)||0),0);
+  const cash = lines.filter(x=>x.payment==="Cash").reduce((a,x)=>a+(Number(x.line)||0),0);
+  const gcash = lines.filter(x=>x.payment==="GCash").reduce((a,x)=>a+(Number(x.line)||0),0);
+  const other = sales-cash-gcash;
+  const receipts = [...new Set(lines.map(x=>x.receipt))].length;
+  return { lines, sales, receipts, cash, gcash, other, lineCount: lines.length };
+}
+function storeCloseCsv(id, day) {
+  const name = storeName(id);
+  const t = storeDayTotals(id, day);
+  const rows = [];
+  rows.push(["S&K REGISTER — Close day"]);
+  rows.push(["Store", name]);
+  rows.push(["Date", day]);
+  rows.push(["Generated", new Date().toLocaleString()]);
+  rows.push([]);
+  rows.push(["KPIs"]);
+  rows.push(["Total sales", t.sales]);
+  rows.push(["Receipts", t.receipts]);
+  rows.push(["Cash", t.cash]);
+  rows.push(["GCash", t.gcash]);
+  rows.push(["Other", t.other]);
+  rows.push(["Lines", t.lineCount]);
+  rows.push([]);
+  rows.push(["Receipts"]);
+  rows.push(["Resibo","Time","Cashier","Pay type","Total"]);
+  const byRcpt = {};
+  t.lines.forEach(x => {
+    const r = x.receipt;
+    byRcpt[r] = byRcpt[r] || { total:0, payment:x.payment||"", time:x.time||"", cashier:x.cashier||"" };
+    byRcpt[r].total += Number(x.line)||0;
+  });
+  Object.keys(byRcpt).sort((a,b)=>Number(a)-Number(b)).forEach(r => {
+    const v = byRcpt[r];
+    rows.push([r, v.time, v.cashier, v.payment, v.total]);
+  });
+  rows.push([]);
+  rows.push(["Item lines"]);
+  rows.push(["Code","Name","Qty","Peso","Pay type","Resibo","Time","Cashier"]);
+  t.lines.forEach(x => {
+    rows.push([x.code, x.name, x.qty, x.line, x.payment||"", x.receipt, x.time||"", x.cashier||""]);
+  });
+  return rows.map(r => r.map(csvCell).join(",")).join("\n");
+}
+function closeFileSlug(id) {
+  return (storeName(id)||"store").replace(/\s+/g,"-");
+}
 function downloadText(name, text) {
   const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = name;
   a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2500);
+}
+function downloadCsv(name, text) {
+  const blob = new Blob([text], {type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2500);
+}
+function showDlMsg(msg) {
+  const el = $("cDlMsg");
+  if (!el) return;
+  el.style.display = "block";
+  el.textContent = msg || "Report saved / Na-download ang ulat.";
+  clearTimeout(showDlMsg._t);
+  showDlMsg._t = setTimeout(() => { el.style.display = "none"; }, 5000);
+}
+function formatClosedAt(isoOrMs) {
+  const d = new Date(isoOrMs);
+  if (isNaN(d.getTime())) return "—";
+  const day = d.toLocaleDateString("en-CA");
+  const hm = d.toTimeString().slice(0,5);
+  return day+" "+hm;
+}
+function updateLastClosed() {
+  const el = $("cLastClosed");
+  if (!el) return;
+  const list = DB.closes || [];
+  if (!list.length) { el.textContent = "Last closed: —"; return; }
+  const latest = list.slice().sort((a,b) => String(b.closedAt).localeCompare(String(a.closedAt)))[0];
+  el.textContent = "Last closed: "+formatClosedAt(latest.closedAt)+" · "+(latest.cashier||"—");
+}
+function pickCloseDay() {
+  const from = $("cFrom").value || today();
+  const to = $("cTo").value || today();
+  if (from !== to) {
+    if ($("cCloseHint")) $("cCloseHint").style.display = "block";
+    alert("Pick one day: set From and To to the same date.");
+    setRange(today(), today());
+    return null;
+  }
+  if ($("cCloseHint")) $("cCloseHint").style.display = "none";
+  return from;
+}
+function runCloseDay() {
+  const day = pickCloseDay();
+  if (!day) return;
+  const existing = (DB.closes||[]).findIndex(c => c.date === day);
+  if (existing >= 0) {
+    if (!confirm("This day is already closed. Replace the close record and download the three files again?")) return;
+  }
+  const fl = Number($("cFloat").value||0);
+  const cntRaw = $("cCount").value;
+  const count = cntRaw === "" ? null : Number(cntRaw);
+  DB.houseFloat = fl;
+  const stores = {};
+  STORES.forEach(s => {
+    const t = storeDayTotals(s.id, day);
+    stores[s.id] = {
+      name: s.name,
+      sales: t.sales,
+      receipts: t.receipts,
+      cash: t.cash,
+      gcash: t.gcash,
+      other: t.other,
+      lines: t.lineCount
+    };
+  });
+  const rec = {
+    date: day,
+    closedAt: new Date().toISOString(),
+    cashier: DB.session || "—",
+    float: fl,
+    count: count,
+    stores: stores
+  };
+  if (!Array.isArray(DB.closes)) DB.closes = [];
+  if (existing >= 0) DB.closes[existing] = rec;
+  else DB.closes.push(rec);
+  save();
+  STORES.forEach((s, i) => {
+    const name = "S&K-"+closeFileSlug(s.id)+"-close-"+day+".csv";
+    const body = storeCloseCsv(s.id, day);
+    setTimeout(() => downloadCsv(name, body), i * 450);
+  });
+  showDlMsg("Day closed · 3 reports downloaded.");
+  updateLastClosed();
+  renderClose();
+  sndOk();
 }
 function addDays(iso, n) {
   const x = new Date(iso+"T12:00:00");
@@ -1881,16 +2049,24 @@ function renderClose() {
   const from = $("cFrom").value;
   const to = $("cTo").value;
   $("cDate").value = to;
-  const cur = STORES.find(x=>x.id===DB.current);
-  $("cStoreTitle").textContent = "S&K report · " + (cur?cur.name:"?");
-  $("cStoreChips").innerHTML = STORES.map(s =>
-    `<button type="button" data-sid="${s.id}" style="${s.id===DB.current?'outline:3px solid #C9A227':''}">${s.name}</button>`
+  const oneDay = from === to;
+  if ($("cCloseHint")) $("cCloseHint").style.display = oneDay ? "none" : "block";
+  const all = !closeFilter;
+  const cur = all ? null : STORES.find(x=>x.id===closeFilter);
+  $("cStoreTitle").textContent = all ? "S&K report · All stores" : "S&K report · "+(cur?cur.name:"?");
+  $("cFloatLbl").textContent = "Opening float ₱ (house)";
+  $("cCountLbl").textContent = "Counted cash ₱";
+  const chips = [{id:"", name:"All"}].concat(STORES.map(s => ({id:s.id, name:s.name})));
+  $("cStoreChips").innerHTML = chips.map(s =>
+    `<button type="button" data-sid="${s.id}" style="${s.id===closeFilter?'outline:3px solid #C9A227':''}">${s.name}</button>`
   ).join("");
   $("cStoreChips").querySelectorAll("button").forEach(b => b.onclick = () => {
-    DB.current = b.dataset.sid; save(); applySession(); renderAll();
+    closeFilter = b.dataset.sid || "";
+    renderClose();
   });
   $("cRangeChips").innerHTML = [
     ["Today", d, d],
+    ["Yesterday", addDays(d,-1), addDays(d,-1)],
     ["7 days", addDays(d,-6), d],
     ["30 days", addDays(d,-29), d],
     ["This month", d.slice(0,8)+"01", d]
@@ -1898,12 +2074,14 @@ function renderClose() {
     `<button type="button" data-a="${a}" data-b="${b}" style="${a===from&&b===to?'outline:3px solid #C9A227':''}">${lab}</button>`
   ).join("");
   $("cRangeChips").querySelectorAll("button").forEach(b => b.onclick = () => setRange(b.dataset.a, b.dataset.b));
-  if (st().settings.float != null) $("cFloat").value = st().settings.float;
-  const lines = st().sales.filter(s => inRange(s.date, from, to));
+  if (DB.houseFloat == null) DB.houseFloat = 2000;
+  $("cFloat").value = DB.houseFloat;
+  $("repThis").disabled = all;
+  const lines = closeLines(from, to);
   const rcpts = [...new Set(lines.map(s=>s.receipt))];
-  const tot = lines.reduce((a,s)=>a+Number(s.line),0);
-  const cash = lines.filter(s=>s.payment==="Cash").reduce((a,s)=>a+Number(s.line),0);
-  const gc = lines.filter(s=>s.payment==="GCash").reduce((a,s)=>a+Number(s.line),0);
+  const tot = lines.reduce((a,s)=>a+(Number(s.line)||0),0);
+  const cash = lines.filter(s=>s.payment==="Cash").reduce((a,s)=>a+(Number(s.line)||0),0);
+  const gc = lines.filter(s=>s.payment==="GCash").reduce((a,s)=>a+(Number(s.line)||0),0);
   const oth = tot-cash-gc;
   $("kpis").innerHTML = `
     <div><span class="muted">Total sales</span><b>${peso(tot)}</b></div>
@@ -1913,19 +2091,31 @@ function renderClose() {
     <div><span class="muted">Other</span><b>${peso(oth)}</b></div>
     <div><span class="muted">Lines</span><b>${lines.length}</b></div>`;
   const byWho = {};
-  lines.forEach(s => { const w=s.cashier||"?"; byWho[w]=(byWho[w]||0)+Number(s.line); });
+  lines.forEach(s => { const w=s.cashier||"?"; byWho[w]=(byWho[w]||0)+(Number(s.line)||0); });
   $("kpis").innerHTML += Object.entries(byWho).map(([w,v])=>`<div><span class="muted">${w}</span><b>${peso(v)}</b></div>`).join("");
+  const fundDay = oneDay ? from : to;
+  const houseCash = STORES.reduce((a,s)=>a+storeDayTotals(s.id, fundDay).cash, 0);
+  const houseGc = STORES.reduce((a,s)=>a+storeDayTotals(s.id, fundDay).gcash, 0);
   const fl = Number($("cFloat").value||0), cnt = $("cCount").value;
-  const exp = fl+cash;
-  $("cExpect").textContent = cnt==="" ? "Expected cash = float + Cash sales = "+peso(exp)
-    : "Expected "+peso(exp)+" · Over/(Short) "+peso(Number(cnt)-exp)+"  (GCash not in drawer)";
+  const exp = fl+houseCash;
+  $("cExpect").textContent = cnt===""
+    ? "Expected = float + Cash sales (all stores) = "+peso(exp)+"  · day "+fundDay+(oneDay?"":" (To date)")
+    : "Expected "+peso(exp)+" · Over/(Short) "+peso(Number(cnt)-exp);
+  $("cGCashNote").textContent = "GCash (not in tin): "+peso(houseGc);
+  $("cCashBreak").textContent = "Groceries cash "+peso(storeDayTotals("groc", fundDay).cash)
+    +" · Gas cash "+peso(storeDayTotals("gas", fundDay).cash)
+    +" · Fishing cash "+peso(storeDayTotals("fish", fundDay).cash);
   const by = {};
-  lines.forEach(s => { by[s.code]=by[s.code]||{name:s.name,qty:0,peso:0}; by[s.code].qty+=s.qty; by[s.code].peso+=s.line; });
-  $("dayItems").innerHTML = "<tr><th>Code</th><th>Name</th><th>Qty</th><th>Sales</th></tr>" +
-    Object.entries(by).map(([k,v])=>`<tr><td>${k}</td><td>${v.name}</td><td>${v.qty}</td><td>${peso(v.peso)}</td></tr>`).join("");
+  lines.forEach(s => {
+    const key = (s.store||"")+"|"+s.code;
+    by[key]=by[key]||{name:s.name,qty:0,peso:0,code:s.code,store:s.store};
+    by[key].qty+=Number(s.qty); by[key].peso+=Number(s.line);
+  });
+  $("dayItems").innerHTML = "<tr><th>Code</th><th>Name</th>"+(all?"<th>Store</th>":"")+"<th>Qty</th><th>Sales</th></tr>" +
+    Object.entries(by).map(([,v])=>`<tr><td>${esc(v.code)}</td><td>${esc(v.name)}</td>${all?"<td>"+esc(storeName(v.store))+"</td>":""}<td>${v.qty}</td><td>${peso(v.peso)}</td></tr>`).join("");
   const payMax = Math.max(cash, gc, oth, 1);
-  const whoMax = Math.max(1, ...Object.values(byWho));
-  const itemMax = Math.max(1, ...Object.values(by).map(v=>v.peso));
+  const whoMax = Math.max(1, ...Object.values(byWho), 1);
+  const itemMax = Math.max(1, ...Object.values(by).map(v=>v.peso), 1);
   const bar = (label, val, max) =>
     `<div class="barrow"><span>${label}</span><div class="bartrk"><div class="barfill" style="width:${Math.round(100*val/max)}%"></div></div><b>${peso(val)}</b></div>`;
   $("cCharts").innerHTML =
@@ -1933,6 +2123,7 @@ function renderClose() {
     "<p style='margin-top:12px'><b>By cashier</b></p>"+(Object.keys(byWho).length?Object.entries(byWho).map(([w,v])=>bar(w,v,whoMax)).join(""):"<p class='muted'>(none)</p>")+
     "<p style='margin-top:12px'><b>Top items</b></p>"+(Object.keys(by).length?Object.entries(by).sort((a,c)=>c[1].peso-a[1].peso).slice(0,8).map(([,v])=>bar(v.name,v.peso,itemMax)).join(""):"<p class='muted'>(none)</p>");
   drawSalesSpark(from, to);
+  updateLastClosed();
 }
 function drawSalesSpark(from, to) {
   const cv = $("salesSpark");
@@ -1941,7 +2132,7 @@ function drawSalesSpark(from, to) {
   const days = [];
   let d = from;
   while (d <= to) { days.push(d); d = addDays(d, 1); if (days.length>62) break; }
-  const vals = days.map(day => st().sales.filter(s=>s.date===day).reduce((a,s)=>a+Number(s.line),0));
+  const vals = days.map(day => closeLines(day, day).reduce((a,s)=>a+(Number(s.line)||0),0));
   const w = cv.width, h = cv.height;
   ctx.fillStyle = "#10261e"; ctx.fillRect(0,0,w,h);
   const max = Math.max(1, ...vals);
@@ -1962,35 +2153,43 @@ function drawSalesSpark(from, to) {
     const last = vals[vals.length-1];
     const first = vals[0];
     const up = last >= first;
-    $("sparkLbl").textContent = "Daily sales · "+peso(last)+" last day · "+(up?"▲":"▼")+" vs first day · "+storeName(DB.current);
+    const scope = closeFilter ? storeName(closeFilter) : "All stores";
+    $("sparkLbl").textContent = "Daily sales · "+peso(last)+" last day · "+(up?"▲":"▼")+" vs first day · "+scope;
     $("sparkLbl").style.color = up ? "#0F7B4A" : "#B42318";
   }
 }
 $("cFrom").onchange = $("cTo").onchange = $("cCount").oninput = renderClose;
 $("cFloat").oninput = () => {
-  st().settings.float = Number($("cFloat").value||0);
+  DB.houseFloat = Number($("cFloat").value||0);
   save(); renderClose();
 };
+$("closeDayBtn").onclick = () => { runCloseDay(); };
 $("repThis").onclick = () => {
+  if (!closeFilter) return;
   const from = $("cFrom").value || today();
   const to = $("cTo").value || today();
-  const slug = (storeName(DB.current)||"store").replace(/\s+/g,"-");
-  downloadText("S&K-"+slug+"-"+from+"-to-"+to+".txt", reportText(DB.current, from, to));
+  const slug = closeFileSlug(closeFilter);
+  downloadText("S&K-"+slug+"-"+from+"-to-"+to+".txt", reportText(closeFilter, from, to));
+  showDlMsg();
 };
 $("repAll").onclick = () => {
   const from = $("cFrom").value || today();
   const to = $("cTo").value || today();
-  STORES.forEach(s => {
-    const slug = s.name.replace(/\s+/g,"-");
-    downloadText("S&K-"+slug+"-"+from+"-to-"+to+".txt", reportText(s.id, from, to));
+  STORES.forEach((s, i) => {
+    const slug = closeFileSlug(s.id);
+    setTimeout(() => downloadText("S&K-"+slug+"-"+from+"-to-"+to+".txt", reportText(s.id, from, to)), i * 350);
   });
+  showDlMsg();
 };
 $("repPrint").onclick = () => {
   const from = $("cFrom").value || today();
   const to = $("cTo").value || today();
+  const body = closeFilter
+    ? reportText(closeFilter, from, to)
+    : STORES.map(s => reportText(s.id, from, to)).join("\n\n================\n\n");
   const w = window.open("", "_blank");
   w.document.write("<pre style='font:18px/1.4 Arial;padding:16px;white-space:pre-wrap'>"+
-    reportText(DB.current,from,to).replace(/</g,"&lt;")+"</pre>");
+    body.replace(/</g,"&lt;")+"</pre>");
   w.document.close(); w.focus(); w.print();
 };
 
@@ -2088,7 +2287,7 @@ $("wipeBtn").onclick = () => {
   st().sales=[]; st().invoices=[]; st().settings.nextRcpt=1001; save(); renderAll();
 };
 
-const TUTOR_REV = 3;
+const TUTOR_REV = 5;
 const GUIDE_UI = {
   en: { help:"Help", faq:"FAQ", tutor:"Tutorial", lang:"Language", news:"What's new", menu:"Menu",
     back:"Back", next:"Next", skip:"Skip", done:"Done", close:"Close",
@@ -2122,9 +2321,9 @@ const GUIDE_UI = {
     catName:{reg:"Register", cat:"Catalog", stock:"Stock", sales:"Sales", close:"Close", inv:"Invoice", staff:"Staff", set:"Backup"} }
 };
 const HELP = {
-  en:"S&K Register keeps three books: Groceries, Gas station, and Fishing supplies. Sell on Register. Change a price, reorder level, or keywords on Catalog. Stock shows what is left. Sales lists posted lines. Close is the day’s report. Open this menu for the FAQ and the full tutorial. The tutorial does not start by itself. After an update, close the site and open it again.",
-  tl:"May tatlong libro ang S&K Register: Groceries, Gas station, at Fishing supplies. Magbenta sa Register. Baguhin ang presyo, reorder, o keywords sa Catalog. Ipinapakita ng Stock ang natitira. Nasa Sales ang mga nai-save na linya. Nasa Close ang ulat ng araw. Buksan ang menu na ito para sa FAQ at buong tutorial. Hindi kusang magsisimula ang tutorial. Pagkatapos ng update, isara ang site at buksan muli.",
-  il:"Addaan ti tallo a libro ti S&K Register: Groceries, Gas station, ken Fishing supplies. Aglako iti Register. Baliwan ti presyo, reorder, wenno keywords iti Catalog. Ipakit ti Stock ti nabati. Adda iti Sales dagiti naisurat a linya. Adda iti Close ti report ti aldaw. Luktan daytoy a menu para iti FAQ ken ti napno a tutorial. Saan a mangrugi a mismo ti tutorial. Kalpasan ti update, irekep ti site sa ilukat manen."
+  en:"S&K Register keeps three books: Groceries, Gas station, and Fishing supplies. Sell on Register. Change a price, reorder level, or keywords on Catalog. Stock shows what is left. Sales lists posted lines. Close day saves a house cash count and downloads three CSV files — one per store. Open this menu for the FAQ and the full tutorial. The tutorial does not start by itself. After an update, close the site and open it again.",
+  tl:"May tatlong libro ang S&K Register: Groceries, Gas station, at Fishing supplies. Magbenta sa Register. Baguhin ang presyo, reorder, o keywords sa Catalog. Ipinapakita ng Stock ang natitira. Nasa Sales ang mga nai-save na linya. Ang Close day ay nagse-save ng house cash count at nagda-download ng tatlong CSV — isa bawat store. Buksan ang menu na ito para sa FAQ at buong tutorial. Hindi kusang magsisimula ang tutorial. Pagkatapos ng update, isara ang site at buksan muli.",
+  il:"Addaan ti tallo a libro ti S&K Register: Groceries, Gas station, ken Fishing supplies. Aglako iti Register. Baliwan ti presyo, reorder, wenno keywords iti Catalog. Ipakit ti Stock ti nabati. Adda iti Sales dagiti naisurat a linya. Ti Close day ket agsave ti house cash count ken ag-download ti tallo a CSV — maysa tunggal store. Luktan daytoy a menu para iti FAQ ken ti napno a tutorial. Saan a mangrugi a mismo ti tutorial. Kalpasan ti update, irekep ti site sa ilukat manen."
 };
 const NEWS = {
   en:"Help, FAQ, and the full tutorial now live in this menu. The tutorial no longer opens by itself. When the guide changes, a note says Tutorial updated.",
@@ -2139,7 +2338,8 @@ const FAQ = {
     {q:"Can one sale mix groceries, gas, and fishing?", a:"Yes. One cart can hold all three. Each line is saved into its own book, with the same receipt number."},
     {q:"What is sukli?", a:"Sukli is the change. Enter the cash they handed you under Bayad / Tendered, then tap SAVE SALE."},
     {q:"How do I switch cashier?", a:"Tap Switch, choose the name, enter that person’s PIN, then Open register."},
-    {q:"Where is the daily report?", a:"Open Close. Pick the store and the dates. Enter the opening float and the counted cash. Download this store, or all 3 stores."},
+    {q:"Where is the daily report?", a:"Open Close. Pick one day (From and To the same). Enter the house opening float and counted cash in the tin. Tap Close day / I-sara ang araw to save the close and download three CSV files — one per store."},
+    {q:"What does Close day do?", a:"It saves a close record for that date (per-store totals plus one house cash count) and downloads three store CSVs. Sales on a closed day still save; run Close again to refresh the three files."},
     {q:"How do I refund?", a:"Open Sales, tap the receipt, and check the items to give back. Set how many, then Refund selected. The original sale stays. Stock comes back, and the day’s total goes down."},
     {q:"How do I back up?", a:"Open Backup, then Export. Keep that file. Import on this iPad brings the books back. This includes sales, catalog, and staff."},
     {q:"The screen looks old.", a:"Close the site completely, then open it again. The register updates when it is opened fresh."},
@@ -2152,7 +2352,8 @@ const FAQ = {
     {q:"Puwede bang paghaluin ang groceries, gas, at fishing?", a:"Oo. Isang cart para sa tatlo. Bawat linya ay napupunta sa sariling libro, parehong numero ng resibo."},
     {q:"Ano ang sukli?", a:"Ang sukli ay ang change. Ilagay ang perang tinanggap sa Bayad / Tendered, tapos SAVE SALE."},
     {q:"Paano magpalit ng cashier?", a:"Pindutin ang Switch, piliin ang pangalan, ilagay ang PIN niya, tapos Open register."},
-    {q:"Saan ang ulat ng araw?", a:"Buksan ang Close. Piliin ang store at ang petsa. Ilagay ang opening float at ang bilang ng cash. I-download ang store na ito, o ang tatlo."},
+    {q:"Saan ang ulat ng araw?", a:"Buksan ang Close. Pumili ng isang araw (pareho ang From at To). Ilagay ang house opening float at ang nabilang na cash sa tin. Pindutin ang Close day / I-sara ang araw para i-save ang close at i-download ang tatlong CSV — isa bawat store."},
+    {q:"Ano ang ginagawa ng Close day?", a:"Nagse-save ito ng close record para sa petsa (per-store totals plus isang house cash count) at nagda-download ng tatlong store CSV. Ang benta sa closed day ay nase-save pa rin; gawin ulit ang Close para i-refresh ang tatlong file."},
     {q:"Paano mag-refund?", a:"Buksan ang Sales, pindutin ang resibo, at i-check ang ibabalik. Ilagay ang dami, tapos Refund selected. Nanatili ang orihinal na benta. Bumabalik ang stock, at bumababa ang total ng araw."},
     {q:"Paano mag-backup?", a:"Buksan ang Backup, tapos Export. Itago ang file. Ang Import sa iPad na ito ang nagbabalik ng mga libro. Kasama ang benta, catalog, at staff."},
     {q:"Luma ang nakikita sa screen.", a:"Isara nang tuluyan ang site, tapos buksan muli. Nag-u-update ang register kapag binuksan nang bago."},
@@ -2165,7 +2366,8 @@ const FAQ = {
     {q:"Mabalin kadi a mairaman ti groceries, gas, ken fishing?", a:"Wen. Maysa a cart ti tallo. Tunggal linya ket mapan iti bukodna a libro, isu met laeng ti numero ti resibo."},
     {q:"Ania ti sukli?", a:"Ti sukli ket ti sinsukli. Iserrek ti kuarta a naawat iti Bayad / Tendered, kalpasanna SAVE SALE."},
     {q:"Kasano ti agsukat ti cashier?", a:"Pinduten ti Switch, pilien ti nagan, iserrek ti PIN na, kalpasanna Open register."},
-    {q:"Ayanna ti report ti aldaw?", a:"Luktan ti Close. Pilien ti store ken ti petsa. Iserrek ti opening float ken ti naibilang a cash. I-download daytoy a store, wenno ti tallo."},
+    {q:"Ayanna ti report ti aldaw?", a:"Luktan ti Close. Pilien ti maysa nga aldaw (agpapada ti From ken To). Iserrek ti house opening float ken ti naibilang a cash iti tin. Pinduten ti Close day / I-sara ang araw tapno ma-save ti close ken ma-download ti tallo a CSV — maysa tunggal store."},
+    {q:"Ania ti aramiden ti Close day?", a:"Ag-save ti close record para iti petsa (per-store totals ken maysa a house cash count) ken ag-download ti tallo a store CSV. Agtalinaed pay laeng ti benta iti closed day; aramiden manen ti Close tapno ma-refresh ti tallo a file."},
     {q:"Kasano ti ag-refund?", a:"Luktan ti Sales, pinduten ti resibo, ken i-check dagiti isubli. Ikabil ti kaadu, kalpasanna Refund selected. Agtalinaed ti orihinal a benta. Agsubli ti stock, ken bumaba ti total ti aldaw."},
     {q:"Kasano ti ag-backup?", a:"Luktan ti Backup, kalpasanna Export. Idulin ti file. Ti Import iti daytoy nga iPad ti mangisubli kadagiti libro. Mairaman ti benta, catalog, ken staff."},
     {q:"Daan ti makita iti screen.", a:"Irekep a naan-anay ti site, kalpasanna ilukat manen. Ag-update ti register no maluktan a baro."},
@@ -2218,13 +2420,13 @@ const GUIDE = [
     tl:["Sales", "Pindutin ang resibo. I-check ang ibabalik at ilagay ang dami, tapos Refund selected. Nanatili ang orihinal na benta."],
     il:["Sales", "Pinduten ti resibo. I-check dagiti isubli ken ikabil ti kaadu, kalpasanna Refund selected. Agtalinaed ti orihinal a benta."] },
   { topic:"close", page:"close", scroll:"top", sel:["#cStoreChips", "#cRangeChips"],
-    en:["Close the day", "Pick the store and the dates. Each store has its own report."],
-    tl:["Isara ang araw", "Piliin ang store at ang petsa. May sariling ulat ang bawat store."],
-    il:["Irekep ti aldaw", "Pilien ti store ken ti petsa. Adda bukod a report ti tunggal store."] },
-  { topic:"close", page:"close", scroll:"#cFloat", sel:["#cFloat", "#cCount", "#repThis", "#repAll"],
-    en:["Download the report", "Enter the opening float and the counted cash. Then download this store, or all 3 books."],
-    tl:["I-download ang ulat", "Ilagay ang opening float at ang nabilang na cash. I-download ang store na ito, o ang 3 libro."],
-    il:["I-download ti report", "Iserrek ti opening float ken ti naibilang a cash. I-download daytoy a store, wenno ti 3 a libro."] },
+    en:["Close day", "Pick one day (From and To the same). Yesterday is fine. Tap a store chip only to preview one book."],
+    tl:["Close day", "Pumili ng isang araw (pareho ang From at To). Puwede ang kahapon. Store chip para sa preview lang."],
+    il:["Close day", "Pilien ti maysa nga aldaw (agpapada ti From ken To). Mabalin ti napalabas. Store chip para iti preview laeng."] },
+  { topic:"close", page:"close", scroll:"#cFloat", sel:["#cFloat", "#cCount", "#closeDayBtn", "#repAll", "#repThis"],
+    en:["Close day / I-sara ang araw", "Enter one house float and one counted cash for the tin. Close day saves the record and downloads three CSV files — one per store."],
+    tl:["Close day / I-sara ang araw", "Ilagay ang isang house float at isang nabilang na cash para sa tin. Nagse-save ang Close day at nagda-download ng tatlong CSV — isa bawat store."],
+    il:["Close day / I-sara ang araw", "Iserrek ti maysa a house float ken maysa a naibilang a cash para iti tin. Ag-save ti Close day ken ag-download ti tallo a CSV — maysa tunggal store."] },
   { topic:"inv", page:"inv", scroll:"#iSave", sel:["#iSup", "#iAmt", "#iSave"],
     en:["Invoice", "Save a supplier bill here. The photo stays on this iPad."],
     tl:["Invoice", "I-save dito ang resibo ng supplier. Nasa iPad na ito ang larawan."],
