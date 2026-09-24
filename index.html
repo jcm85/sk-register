@@ -234,6 +234,9 @@ input.ylw, select.ylw { background:var(--ylw); }
 .btn-a { background:var(--amber); color:#1a1a1a; font-size:22px; min-height:64px; }
 .btn-r { background:var(--red); color:#fff; }
 .btn-ghost { background:#eee; font-size:16px; padding:12px 14px; min-height:44px; }
+.btn:disabled, .btn[disabled] {
+  opacity:.45; cursor:not-allowed; filter:grayscale(.35);
+}
 .line {
   display:grid; grid-template-columns:1.1fr .6fr .5fr auto; gap:8px; align-items:center;
   padding:12px 0; border-bottom:1px solid #eee; font-size:18px;
@@ -1446,6 +1449,7 @@ function shrinkPhoto(file) {
 
 let editingCode = null;
 let editingStore = null;
+let keysHandEdited = false;
 function esc(s) {
   return String(s??"").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));
 }
@@ -1687,6 +1691,7 @@ function clearItemForm() {
 function openItem(c, storeId) {
   editingCode = c.code;
   editingStore = storeId || DB.current;
+  keysHandEdited = true;
   $("nCode").value = c.code || "";
   $("nName").value = c.name || "";
   if ([...$("nCat").options].some(o => o.text===c.cat)) $("nCat").value = c.cat;
@@ -2123,21 +2128,23 @@ function storeCloseCsv(id, day) {
 function closeFileSlug(id) {
   return (storeName(id)||"store").replace(/\s+/g,"-");
 }
-function downloadText(name, text) {
-  const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
+function triggerDownload(name, blob) {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = name;
+  a.style.display = "none";
+  document.body.appendChild(a);
   a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2500);
+  setTimeout(() => {
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }, 2500);
+}
+function downloadText(name, text) {
+  triggerDownload(name, new Blob([text], {type:"text/plain;charset=utf-8"}));
 }
 function downloadCsv(name, text) {
-  const blob = new Blob([text], {type:"text/csv;charset=utf-8"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2500);
+  triggerDownload(name, new Blob([text], {type:"text/csv;charset=utf-8"}));
 }
 function showDlMsg(msg) {
   const el = $("cDlMsg");
@@ -2245,14 +2252,18 @@ function renderClose() {
   $("cStoreTitle").textContent = all ? "S&K report · All stores" : "S&K report · "+(cur?cur.name:"?");
   $("cFloatLbl").textContent = "Opening float ₱ (house)";
   $("cCountLbl").textContent = "Counted cash ₱";
-  const chips = [{id:"", name:"All"}].concat(STORES.map(s => ({id:s.id, name:s.name})));
-  $("cStoreChips").innerHTML = chips.map(s =>
-    `<button type="button" data-sid="${s.id}" style="${s.id===closeFilter?'outline:3px solid #C9A227':''}">${s.name}</button>`
-  ).join("");
-  $("cStoreChips").querySelectorAll("button").forEach(b => b.onclick = () => {
-    closeFilter = b.dataset.sid || "";
+  const chips = [{id:"all", name:"All"}].concat(STORES.map(s => ({id:s.id, name:s.name})));
+  $("cStoreChips").innerHTML = chips.map(s => {
+    const on = s.id === "all" ? all : s.id === closeFilter;
+    return `<button type="button" data-close-sid="${s.id}" style="${on?'outline:3px solid #C9A227':''}">${s.name}</button>`;
+  }).join("");
+  $("cStoreChips").onclick = (e) => {
+    const b = e.target && e.target.closest && e.target.closest("button[data-close-sid]");
+    if (!b || !$("cStoreChips").contains(b)) return;
+    const sid = b.getAttribute("data-close-sid") || "all";
+    closeFilter = sid === "all" ? "" : sid;
     renderClose();
-  });
+  };
   $("cRangeChips").innerHTML = [
     ["Today", d, d],
     ["Yesterday", addDays(d,-1), addDays(d,-1)],
@@ -2265,7 +2276,12 @@ function renderClose() {
   $("cRangeChips").querySelectorAll("button").forEach(b => b.onclick = () => setRange(b.dataset.a, b.dataset.b));
   if (DB.houseFloat == null) DB.houseFloat = 2000;
   $("cFloat").value = DB.houseFloat;
-  $("repThis").disabled = all;
+  const repThis = $("repThis");
+  repThis.disabled = all;
+  repThis.title = all
+    ? "Pick Groceries, Gas station, or Fishing supplies first"
+    : "Download report for "+(cur ? cur.name : "this store");
+  repThis.setAttribute("aria-disabled", all ? "true" : "false");
   const lines = closeLines(from, to);
   const rcpts = [...new Set(lines.map(s=>s.receipt))];
   const tot = lines.reduce((a,s)=>a+(Number(s.line)||0),0);
@@ -2353,14 +2369,15 @@ $("cFloat").oninput = () => {
   save(); renderClose();
 };
 $("closeDayBtn").onclick = () => { runCloseDay(); };
-$("repThis").onclick = () => {
+function downloadThisStoreReport() {
   if (!closeFilter) return;
   const from = $("cFrom").value || today();
   const to = $("cTo").value || today();
   const slug = closeFileSlug(closeFilter);
   downloadText("S&K-"+slug+"-"+from+"-to-"+to+".txt", reportText(closeFilter, from, to));
-  showDlMsg();
-};
+  showDlMsg("Saved · "+storeName(closeFilter)+" report.");
+}
+$("repThis").onclick = downloadThisStoreReport;
 $("repAll").onclick = () => {
   const from = $("cFrom").value || today();
   const to = $("cTo").value || today();
