@@ -578,10 +578,10 @@ body.lock-on { overflow:hidden; }
   </div>
   <div class="card cat-list"><table id="catTable"></table></div>
   <div class="card" id="itemForm">
-    <p class="muted">Fill this in to add an item. To remove one, tap it in the list first.</p>
+    <p class="muted">Fill this in to add an item. The code is made for you. To remove one, tap it in the list first.</p>
     <div class="row">
-      <div><label>Code</label><input id="nCode" class="ylw" placeholder="PEPSI8"></div>
       <div><label>Name</label><input id="nName" class="ylw" placeholder="Pepsi bottle"></div>
+      <div><label>Code</label><input id="nCode" class="ylw" placeholder="auto" readonly tabindex="-1"></div>
     </div>
     <div class="row3">
       <div><label>Category</label>
@@ -1449,6 +1449,184 @@ let editingStore = null;
 function esc(s) {
   return String(s??"").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));
 }
+/** All item codes across the three books (uppercase). */
+function allCatalogCodes() {
+  const set = new Set();
+  STORES.forEach(s => {
+    const book = DB.stores && DB.stores[s.id];
+    (book && book.catalog || []).forEach(c => {
+      if (c && c.code) set.add(String(c.code).toUpperCase());
+    });
+  });
+  return set;
+}
+function codeAlnum(w) { return String(w || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase(); }
+/** Known multi-word brands → short stem (matches seed: LC, GT, DM, SWAN, …). */
+function brandStem(words) {
+  const a = codeAlnum(words[0] || "");
+  const b = codeAlnum(words[1] || "");
+  const pair = (a + " " + b).toLowerCase();
+  if (a.startsWith("LADY") || /^LADIES?$/.test(a)) return "LC";
+  if (a === "GREAT" && b.startsWith("TASTE")) return "GT";
+  if (a === "DEL" && b.startsWith("MONTE")) return "DM";
+  if (a === "SILVER" && b.startsWith("SWAN")) return "SWAN";
+  if (a === "DATU" && b.startsWith("PUTI")) return "DP";
+  if (a.startsWith("YOUNG") && b.startsWith("TOWN")) return "YT";
+  if (a === "MANG" && b.startsWith("TOMAS")) return "MT";
+  if (a === "SAN" && b.startsWith("MIG")) {
+    const c = codeAlnum(words[2] || "");
+    if (c.startsWith("LIGHT")) return "SML";
+    return "SM";
+  }
+  if (a === "SAN" && b.startsWith("MAR")) return "SM";
+  if (a === "LUCKY" && b.startsWith("ME")) return "LM";
+  if (a.startsWith("NESCA")) return "NES";
+  if (a.startsWith("KOPIK")) return "KOP";
+  if (a.startsWith("ALIBA")) return "ALI";
+  if (a.startsWith("YUM")) return "YUM";
+  if (a.startsWith("COFFEE") || /^COFFEEMATE/.test(a + b)) return "CM";
+  if (a.startsWith("ALASKA")) return "ALA";
+  if (a === "BEAR" && b.startsWith("BRAND")) return "BEAR";
+  if (a.startsWith("KREM")) return "KT";
+  if (a === "UFC") return "UFC";
+  if (a === "CDO") return "CDO";
+  if (a.startsWith("ARGENT")) return "ARG";
+  if (a === "PAPA") return "PAPA";
+  if (a.startsWith("NATURE") && b.startsWith("SPRING")) return "WAT";
+  if (a === "RED" && b.startsWith("HORSE")) return "RH";
+  if (a === "RC") return "RC";
+  if (a === "C2") return "C2";
+  if (!b) return a.slice(0, 6);
+  if (a.length >= 4) return a.slice(0, 5);
+  if (a.length && b.length) return (a + b.charAt(0)).slice(0, 4);
+  return a.slice(0, 6) || "ITEM";
+}
+/**
+ * Same naming style as the seed catalog: short uppercase from the product name,
+ * size/unit suffix (8, 15, 500, CS, 1L…), hyphen for brand-variant (YUM-HD, LC-HAM).
+ */
+function buildCodeBase(name, unit) {
+  const raw = String(name || "").trim();
+  if (!raw) return "";
+  const u = String(unit || "").toLowerCase();
+  const lower = raw.toLowerCase();
+
+  if (u === "l" || /\b(unleaded|gasoline|diesel)\b/.test(lower)) {
+    if (/\bpremium\b/.test(lower)) return "PUNL";
+    if (/\bunlead/.test(lower)) return "UNL";
+  }
+
+  let sizeSuf = "";
+  const sizeRe = /(\d+(?:\.\d+)?)\s*(ml|l|oz|kg|g|m)\b/gi;
+  let sm;
+  while ((sm = sizeRe.exec(raw))) {
+    const numRaw = sm[1];
+    const unitPart = (sm[2] || "").toLowerCase();
+    if (unitPart === "kg") sizeSuf = String(numRaw).replace(/\./g, "") + "KG";
+    else if (unitPart === "l") {
+      if (numRaw.includes(".")) sizeSuf = numRaw.replace(".", ""); // 1.5L → 15
+      else sizeSuf = numRaw + "L";
+    } else sizeSuf = String(numRaw).replace(/\./g, "");
+  }
+  if (!sizeSuf) {
+    const bare = raw.match(/#\s*(\d+)\b/) || raw.match(/\b(\d{2,4})\b/);
+    if (bare && !/\b(24|175|100)\b/.test(bare[0])) sizeSuf = bare[1]; // hook #6, Kopiko 78, line 50m-style
+  }
+
+  const STOP = new Set(["a","an","the","of","and","or","na","nang","sa","bottle","bote","bottles","pack","packs","crate","crates","case","cases","kahon","pc","pcs","sachet","cup","can","stick","jumbo","bundle","tub","box","pouch","twin","in","with","for","style","all","purpose","fortified","original","classic","whole","pure","shots","spread","sauce","ketchup","catsup","return","blangko","empty"]);
+  let words = raw.split(/[\s\/,]+/).map(w => w.replace(/^[^a-zA-Z0-9#+.]+|[^a-zA-Z0-9#+.]+$/g, "")).filter(Boolean);
+  words = words.filter(w => {
+    const wl = w.toLowerCase();
+    if (STOP.has(wl)) return false;
+    if (/^\d+(?:\.\d+)?(ml|l|oz|kg|g|m)?$/i.test(w)) return false;
+    if (/^#?\d+$/.test(w)) return false;
+    return true;
+  });
+
+  // Fishing: prefer the noun (hook, line, sinker, bait)
+  if (/\b(hook|line|sinker|bait|tingga|kawit|pisi|pain)\b/i.test(raw)) {
+    let noun = "HOOK";
+    if (/\bline\b/i.test(raw)) noun = "LINE";
+    else if (/\bsinker|tingga\b/i.test(raw)) noun = "SINK";
+    else if (/\bbait|pain\b/i.test(raw)) noun = "BAIT";
+    else if (/\bhook|kawit\b/i.test(raw)) noun = "HOOK";
+    return (noun + (sizeSuf || "")).slice(0, 10);
+  }
+
+  if (u === "crate" || /\b(crate|case|kahon)\b/.test(lower)) {
+    const stem = brandStem(words.length ? words : raw.split(/\s+/)).replace(/-.*$/, "").slice(0, 4);
+    return (stem + "CS").slice(0, 10);
+  }
+
+  if (!words.length) return ("ITEM" + (sizeSuf || "")).slice(0, 10);
+
+  let stem = brandStem(words);
+  // Variant after known brand (Yum Shots Hotdog → YUM-HD; Lady's Choice Ham → LC-HAM)
+  let variant = "";
+  const brandWordCount =
+    (stem === "LC" || stem === "GT" || stem === "DM" || stem === "DP" || stem === "YT" || stem === "MT" || stem === "LM" || stem === "SM" || stem === "SWAN" || stem === "BEAR") ? 2
+    : (stem === "NES" || stem === "KOP" || stem === "ALI" || stem === "YUM" || stem === "CM" || stem === "ALA" || stem === "KT" || stem === "ARG" || stem === "UFC" || stem === "CDO" || stem === "PAPA" || stem === "WAT" || stem === "RH" || stem === "RC" || stem === "C2") ? 1
+    : 1;
+  if (!sizeSuf && words.length > brandWordCount) {
+    const vWord = words[brandWordCount] || words[words.length - 1];
+    variant = codeAlnum(vWord).slice(0, 4);
+    // Hotdog → HD, Tomato → TO, Sweet → SW, Barbecue → BBQ, Pancit Canton → PC
+    const vl = String(vWord).toLowerCase();
+    if (vl.startsWith("hotdog")) variant = "HD";
+    else if (vl.startsWith("tomato")) variant = "TO";
+    else if (vl.startsWith("sweet")) variant = "SW";
+    else if (vl.startsWith("barb")) variant = "BBQ";
+    else if (vl.startsWith("pancit") || vl.startsWith("canton")) variant = "PC";
+    else if (vl.startsWith("creamy")) variant = "CW";
+    else if (vl === "white") variant = "W";
+    else if (vl.startsWith("brown")) variant = "BR";
+    else if (vl.startsWith("blanc")) variant = "BL";
+    else if (vl.startsWith("black")) variant = "BK";
+  }
+
+  if (!sizeSuf && u === "btl") sizeSuf = "8";
+
+  let code;
+  if (variant && !sizeSuf) code = stem + "-" + variant;
+  else if (sizeSuf) {
+    // C2-500 and SWAN-1L need a hyphen; COKE8 / WAT500 / SML330 / PEPSI8 concatenate.
+    if (/\d$/.test(stem) || /(?:L|KG)$/.test(sizeSuf)) code = stem + "-" + sizeSuf;
+    else code = stem + sizeSuf;
+  } else if (words.length === 1) {
+    code = codeAlnum(words[0]).slice(0, 7); // NOVA, EMPTY, CHUMZ, BAWANG, RENO
+  } else if (words.length >= 2 && codeAlnum(words[0]).length + codeAlnum(words[1]).length <= 7) {
+    code = (codeAlnum(words[0]) + codeAlnum(words[1])).slice(0, 7); // FISHCK
+  } else {
+    code = stem;
+  }
+
+  code = String(code).toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9.-]/g, "");
+  if (code.length > 10) code = code.slice(0, 10).replace(/-$/, "");
+  return code || "ITEM";
+}
+function uniquifyCode(base) {
+  const set = allCatalogCodes();
+  let b = String(base || "ITEM").toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9.-]/g, "");
+  if (!b) b = "ITEM";
+  if (b.length > 10) b = b.slice(0, 10).replace(/-$/, "");
+  if (!set.has(b)) return b;
+  for (let n = 2; n < 100; n++) {
+    const suffix = String(n);
+    let cand = b + suffix;
+    if (cand.length > 12) cand = b.slice(0, Math.max(4, 12 - suffix.length)) + suffix;
+    if (!set.has(cand)) return cand;
+  }
+  return (b.slice(0, 6) + Date.now().toString().slice(-4)).slice(0, 12);
+}
+function suggestCode(name, unit, storeId) {
+  return uniquifyCode(buildCodeBase(name, unit));
+}
+function refreshSuggestedCode() {
+  if (editingCode) return;
+  const name = ($("nName") && $("nName").value || "").trim();
+  if (!name) { if ($("nCode")) $("nCode").value = ""; return; }
+  $("nCode").value = suggestCode(name, $("nUnit").value, DB.current);
+}
 function removedKey(storeId, code) { return storeId+":"+String(code||"").toUpperCase(); }
 function markRemoved(storeId, code) {
   if (!Array.isArray(DB.removed)) DB.removed = [];
@@ -1504,6 +1682,7 @@ function clearItemForm() {
   const s = STORES.find(x => x.id===DB.current);
   if (s) $("nCat").value = s.name;
   if (DB.current==="gas") $("nUnit").value = "L";
+  refreshSuggestedCode();
 }
 function openItem(c, storeId) {
   editingCode = c.code;
@@ -1583,15 +1762,27 @@ $("itemRemove").onclick = () => {
   renderCat(); renderStock(); renderHits(); renderFavs();
   $("nPhotoMsg").textContent = "Removed "+code;
 };
+$("nName").addEventListener("input", refreshSuggestedCode);
+$("nUnit").addEventListener("change", refreshSuggestedCode);
 $("addItemBtn").onclick = async () => {
-  const code = $("nCode").value.trim().toUpperCase();
-  if (!code || !$("nName").value.trim()) { alert("Need code and name"); return; }
+  const name = $("nName").value.trim();
+  if (!name) { alert("Need a name"); return; }
+  // Editing keeps the existing code; adding always uses the auto code (never typed).
+  let code = editingCode ? String(editingCode).toUpperCase() : $("nCode").value.trim().toUpperCase();
+  if (!editingCode) {
+    if (!code) code = suggestCode(name, $("nUnit").value, DB.current);
+    $("nCode").value = code;
+  }
   const srcId = editingStore || DB.current;
   const destId = storeIdByName($("nCat").value);
   const src = DB.stores[srcId].catalog;
   const oldCode = editingCode;
   const ix = src.findIndex(c => c.code===(oldCode || code));
   const prev = ix>=0 ? src[ix] : null;
+  if (!editingCode && (!prev || prev.code!==code) && DB.stores[destId].catalog.some(c => c.code===code && !(srcId===destId && prev && prev.code===code))) {
+    code = suggestCode(name, $("nUnit").value, DB.current);
+    $("nCode").value = code;
+  }
   if ((!prev || prev.code!==code) && DB.stores[destId].catalog.some(c => c.code===code && !(srcId===destId && prev && prev.code===code))) {
     alert(code+" is already in "+storeName(destId));
     return;
@@ -1602,15 +1793,13 @@ $("addItemBtn").onclick = async () => {
     catch(e) { alert("Could not read photo"); return; }
   }
   const row = {
-    code, name:$("nName").value.trim(), cat:$("nCat").value, unit:$("nUnit").value,
+    code, name, cat:$("nCat").value, unit:$("nUnit").value,
     cost:Number($("nCost").value||0), price:Number($("nPrice").value||0),
     reo:Number($("nReo").value||0), start:Number($("nStart").value||0),
     keys:($("nKeys").value||"").toLowerCase(), photo, active: prev ? prev.active!==false : true
   };
-  if (oldCode && oldCode!==code) {
-    (DB.stores[srcId].sales||[]).forEach(s => { if (s.code===oldCode) s.code = code; });
-  }
-  if (oldCode && (destId!==srcId || oldCode!==code)) markRemoved(srcId, oldCode);
+  // Codes are read-only — never rename an existing item's code or rewrite sales.
+  if (oldCode && destId!==srcId) markRemoved(srcId, oldCode);
   unmarkRemoved(destId, code);
   if (destId!==srcId) {
     if (ix>=0) src.splice(ix, 1);
