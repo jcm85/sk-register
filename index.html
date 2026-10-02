@@ -1407,9 +1407,11 @@ $("saveBtn").onclick = () => {
   const books = new Set();
   DB.cart.forEach(l => {
     const sid = storeIdOf(l);
+    const it = findItem(l.code, sid);
     DB.stores[sid].sales.push({
       ...rec, code:l.code, name:l.name, cat:l.cat, qty:l.qty, unit:l.unit||"",
-      unitPrice:l.price, line:l.price*l.qty, id: Date.now()+"-"+sid+"-"+l.code
+      unitPrice:l.price, unitCost:Number((it&&it.cost)||0),
+      line:l.price*l.qty, id: Date.now()+"-"+sid+"-"+l.code
     });
     books.add(storeName(sid));
   });
@@ -2136,11 +2138,14 @@ function postRefund() {
     const hit = findSaleLine(p.id);
     const price = Number(hit.line.unitPrice);
     const sid = hit.store;
+    const origCost = hit.line.unitCost;
+    const unitCost = Number.isFinite(Number(origCost)) ? Number(origCost) : catalogUnitCost(sid, hit.line.code);
     DB.stores[sid].sales.push({
       receipt: rcpt, date: today(), time: nowT(), cashier: DB.session, payment: pay,
       tendered: 0, change: 0, refund: true, refundReceipt: Number(refundRcpt), refundOf: p.id,
       code: hit.line.code, name: hit.line.name, cat: hit.line.cat,
-      qty: -p.qty, unit: hit.line.unit||"", unitPrice: price, line: Math.round(-price*p.qty*100)/100,
+      qty: -p.qty, unit: hit.line.unit||"", unitPrice: price, unitCost: unitCost,
+      line: Math.round(-price*p.qty*100)/100,
       id: Date.now()+"-rf-"+i+"-"+p.id
     });
   });
@@ -2164,6 +2169,21 @@ function inRange(date, from, to) {
   if (to && date > to) return false;
   return true;
 }
+function catalogUnitCost(sid, code) {
+  const cat = ((DB.stores[sid]||{}).catalog||[]).find(c => c.code===code);
+  return Number((cat && cat.cost) || 0);
+}
+function lineSoldCost(x, sid) {
+  const qty = Number(x.qty)||0;
+  const snap = x.unitCost;
+  const unit = snap != null && snap !== "" && Number.isFinite(Number(snap))
+    ? Number(snap)
+    : catalogUnitCost(sid || x.store, x.code);
+  return qty * unit;
+}
+function soldCostTotal(lines, sid) {
+  return (lines||[]).reduce((a,x)=>a+lineSoldCost(x, sid || x.store), 0);
+}
 function linesFor(id, from, to) {
   return (DB.stores[id] && DB.stores[id].sales || []).filter(s => inRange(s.date, from, to));
 }
@@ -2181,13 +2201,19 @@ function reportText(id, from, to) {
   const lines = linesFor(id, from, to);
   const rcpts = [...new Set(lines.map(x=>x.receipt))];
   const tot = lines.reduce((a,x)=>a+Number(x.line),0);
+  const cost = soldCostTotal(lines, id);
   const cash = lines.filter(x=>x.payment==="Cash").reduce((a,x)=>a+Number(x.line),0);
   const gc = lines.filter(x=>x.payment==="GCash").reduce((a,x)=>a+Number(x.line),0);
   const oth = tot-cash-gc;
   const byWho = {};
   lines.forEach(x => { const w=x.cashier||"?"; byWho[w]=(byWho[w]||0)+Number(x.line); });
   const by = {};
-  lines.forEach(x => { by[x.code]=by[x.code]||{name:x.name,qty:0,peso:0,unit:x.unit||""}; by[x.code].qty+=Number(x.qty); by[x.code].peso+=x.line; });
+  lines.forEach(x => {
+    by[x.code]=by[x.code]||{name:x.name,qty:0,peso:0,cost:0,unit:x.unit||""};
+    by[x.code].qty+=Number(x.qty);
+    by[x.code].peso+=x.line;
+    by[x.code].cost+=lineSoldCost(x, id);
+  });
   const fl = Number(DB.houseFloat != null ? DB.houseFloat : 2000);
   let t = "S&K REGISTER REPORT\n";
   t += "Ulat ng araw / Day report\n";
@@ -2197,6 +2223,7 @@ function reportText(id, from, to) {
   t += "--------------------------------\n";
   t += "Receipts: "+rcpts.length+"\n";
   t += "Total sales: "+peso(tot)+"\n";
+  t += "Total cost: "+peso(cost)+"\n";
   t += "Cash: "+peso(cash)+"\n";
   t += "GCash: "+peso(gc)+"\n";
   t += "Other: "+peso(oth)+"\n";
@@ -2205,7 +2232,7 @@ function reportText(id, from, to) {
   Object.keys(byWho).forEach(w => { t += w+": "+peso(byWho[w])+"\n"; });
   if (!Object.keys(byWho).length) t += "(none)\n";
   t += "--------------------------------\nITEMS SOLD\n";
-  Object.entries(by).forEach(([k,v]) => { t += k+"  "+v.name+"  "+(v.unit==="L"?v.qty+" L":"x"+v.qty)+"  "+peso(v.peso)+"\n"; });
+  Object.entries(by).forEach(([k,v]) => { t += k+"  "+v.name+"  "+(v.unit==="L"?v.qty+" L":"x"+v.qty)+"  "+peso(v.peso)+"  cost "+peso(v.cost)+"\n"; });
   if (!Object.keys(by).length) t += "(none)\n";
   t += "--------------------------------\nIndependent book — not mixed with other S&K stores.\n";
   return t;
@@ -2222,7 +2249,8 @@ function storeDayTotals(id, day) {
   const gcash = lines.filter(x=>x.payment==="GCash").reduce((a,x)=>a+(Number(x.line)||0),0);
   const other = sales-cash-gcash;
   const receipts = [...new Set(lines.map(x=>x.receipt))].length;
-  return { lines, sales, receipts, cash, gcash, other, lineCount: lines.length };
+  const cost = soldCostTotal(lines, id);
+  return { lines, sales, receipts, cash, gcash, other, cost, lineCount: lines.length };
 }
 function storeCloseCsv(id, day) {
   const name = storeName(id);
@@ -2235,6 +2263,7 @@ function storeCloseCsv(id, day) {
   rows.push([]);
   rows.push(["KPIs"]);
   rows.push(["Total sales", t.sales]);
+  rows.push(["Total cost", t.cost]);
   rows.push(["Receipts", t.receipts]);
   rows.push(["Cash", t.cash]);
   rows.push(["GCash", t.gcash]);
@@ -2255,9 +2284,9 @@ function storeCloseCsv(id, day) {
   });
   rows.push([]);
   rows.push(["Item lines"]);
-  rows.push(["Code","Name","Qty","Peso","Pay type","Resibo","Time","Cashier"]);
+  rows.push(["Code","Name","Qty","Peso","Cost","Pay type","Resibo","Time","Cashier"]);
   t.lines.forEach(x => {
-    rows.push([x.code, x.name, x.qty, x.line, x.payment||"", x.receipt, x.time||"", x.cashier||""]);
+    rows.push([x.code, x.name, x.qty, x.line, lineSoldCost(x, id), x.payment||"", x.receipt, x.time||"", x.cashier||""]);
   });
   return rows.map(r => r.map(csvCell).join(",")).join("\n");
 }
@@ -2338,6 +2367,7 @@ function runCloseDay() {
       cash: t.cash,
       gcash: t.gcash,
       other: t.other,
+      cost: t.cost,
       lines: t.lineCount
     };
   });
@@ -2421,11 +2451,13 @@ function renderClose() {
   const lines = closeLines(from, to);
   const rcpts = [...new Set(lines.map(s=>s.receipt))];
   const tot = lines.reduce((a,s)=>a+(Number(s.line)||0),0);
+  const cost = soldCostTotal(lines);
   const cash = lines.filter(s=>s.payment==="Cash").reduce((a,s)=>a+(Number(s.line)||0),0);
   const gc = lines.filter(s=>s.payment==="GCash").reduce((a,s)=>a+(Number(s.line)||0),0);
   const oth = tot-cash-gc;
   $("kpis").innerHTML = `
     <div><span class="muted">Total sales</span><b>${peso(tot)}</b></div>
+    <div><span class="muted">Total cost</span><b>${peso(cost)}</b></div>
     <div><span class="muted">Receipts</span><b>${rcpts.length}</b></div>
     <div><span class="muted">Cash</span><b>${peso(cash)}</b></div>
     <div><span class="muted">GCash</span><b>${peso(gc)}</b></div>
@@ -2449,11 +2481,11 @@ function renderClose() {
   const by = {};
   lines.forEach(s => {
     const key = (s.store||"")+"|"+s.code;
-    by[key]=by[key]||{name:s.name,qty:0,peso:0,code:s.code,store:s.store};
-    by[key].qty+=Number(s.qty); by[key].peso+=Number(s.line);
+    by[key]=by[key]||{name:s.name,qty:0,peso:0,cost:0,code:s.code,store:s.store};
+    by[key].qty+=Number(s.qty); by[key].peso+=Number(s.line); by[key].cost+=lineSoldCost(s);
   });
-  $("dayItems").innerHTML = "<tr><th>Code</th><th>Name</th>"+(all?"<th>Store</th>":"")+"<th>Qty</th><th>Sales</th></tr>" +
-    Object.entries(by).map(([,v])=>`<tr><td>${esc(v.code)}</td><td>${esc(v.name)}</td>${all?"<td>"+esc(storeName(v.store))+"</td>":""}<td>${v.qty}</td><td>${peso(v.peso)}</td></tr>`).join("");
+  $("dayItems").innerHTML = "<tr><th>Code</th><th>Name</th>"+(all?"<th>Store</th>":"")+"<th>Qty</th><th>Sales</th><th>Cost</th></tr>" +
+    Object.entries(by).map(([,v])=>`<tr><td>${esc(v.code)}</td><td>${esc(v.name)}</td>${all?"<td>"+esc(storeName(v.store))+"</td>":""}<td>${v.qty}</td><td>${peso(v.peso)}</td><td>${peso(v.cost)}</td></tr>`).join("");
   const payMax = Math.max(cash, gc, oth, 1);
   const whoMax = Math.max(1, ...Object.values(byWho), 1);
   const itemMax = Math.max(1, ...Object.values(by).map(v=>v.peso), 1);
