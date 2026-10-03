@@ -407,6 +407,23 @@ body.lock-on { overflow:hidden; }
 #tutorNews.on { display:block; }
 #tutorNews .tutor-actions { display:flex; gap:8px; margin-top:10px; }
 #tutorNews .tutor-actions .btn { width:auto; flex:1; min-height:48px; font-size:16px; padding:10px; }
+#printSlip { display:none; }
+#rPrintWrap { display:flex; align-items:center; gap:10px; margin:10px 0 4px; }
+#rPrintWrap input { width:auto; min-height:28px; margin:0; }
+#rPrintWrap label { margin:0; font-size:16px; }
+@media print {
+  html, body { background:#fff !important; color:#000 !important; }
+  body * { visibility:hidden !important; }
+  #printSlip, #printSlip * { visibility:visible !important; }
+  #printSlip {
+    display:block !important; position:absolute; left:0; top:0; width:100%;
+    padding:8px 12px; font:16px/1.35 Arial,sans-serif; background:#fff; color:#000;
+  }
+  #printSlip table { width:100%; border-collapse:collapse; }
+  #printSlip td { padding:4px 0; border-bottom:1px dashed #ccc; font-size:15px; }
+  #printSlip .tot td { border-bottom:0; font-weight:700; font-size:18px; }
+  header, nav, .page, #lock, #drawer, #drawerScrim, #tutor, #tutorNews { display:none !important; }
+}
 </style>
 </head>
 <body>
@@ -469,6 +486,7 @@ body.lock-on { overflow:hidden; }
   </div>
   <div id="helpBody"></div>
 </aside>
+<div id="printSlip" aria-hidden="true"></div>
 <div id="tutorNews" class="card">
   <b id="tutorNewsTitle">Tutorial updated</b>
   <p id="tutorNewsText" style="margin:6px 0 0"></p>
@@ -560,6 +578,10 @@ body.lock-on { overflow:hidden; }
             <div class="money" id="change">₱0.00</div>
           </div>
         </div>
+        <div id="rPrintWrap">
+          <input id="rPrint" type="checkbox" checked>
+          <label for="rPrint">Print receipt / I-print ang resibo</label>
+        </div>
         <button class="btn btn-a" id="saveBtn">SAVE SALE · I-SAVE ANG BENTA</button>
         <button class="btn btn-ghost" id="reprintBtn" type="button" style="display:none">Reprint last / I-print muli</button>
         <p class="muted" id="saveMsg"></p>
@@ -643,6 +665,7 @@ body.lock-on { overflow:hidden; }
       <select id="refundPay" class="ylw"><option>Cash</option><option>GCash</option><option>Other</option></select>
     </div>
     <button class="btn btn-r" id="refundGo" type="button" style="margin-top:10px">Refund selected</button>
+    <button class="btn btn-g" id="refundPrint" type="button" style="margin-top:8px">Print receipt / I-print ang resibo</button>
     <button class="btn btn-ghost" id="refundCancel" type="button" style="margin-top:8px">Cancel</button>
     <p class="muted" id="refundMsg"></p>
   </div>
@@ -1042,6 +1065,7 @@ function load() {
   if (!d.recv || typeof d.recv!=="object") d.recv = {};
   if (!d.opened || typeof d.opened!=="object") d.opened = {};
   if (d.lastRcpt===undefined) d.lastRcpt = null;
+  if (d.printRcpt===undefined) d.printRcpt = true;
   if (!Array.isArray(d.closes)) d.closes = [];
   if (d.houseFloat == null) d.houseFloat = 2000;
   seedFavsIfNeeded(d);
@@ -1149,6 +1173,7 @@ function applySession() {
   $("storeTitle").textContent = "S&K Register";
   $("storeSub").textContent = DB.session ? "Signed in · "+DB.session : "Enter PIN once, then sell any category";
   $("rRcpt").value = DB.nextRcpt;
+  if ($("rPrint")) $("rPrint").checked = DB.printRcpt!==false;
 }
 
 function soldQty(code, storeId) {
@@ -1430,6 +1455,12 @@ $("saveBtn").onclick = () => {
   if ((DB.closes||[]).some(c => c.date === saleDate)) {
     alert("This day is already closed. Sale is saved; run Close again to refresh the three files.");
   }
+  offerPrint(rcpt);
+};
+if ($("rPrint")) $("rPrint").onchange = () => {
+  DB.printRcpt = $("rPrint").checked;
+  save();
+  syncPhonePayHeight();
 };
 
 function shrinkPhoto(file) {
@@ -2059,6 +2090,41 @@ function linesForReceipt(rcpt) {
   }));
   return out;
 }
+function printReceipt(rcpt) {
+  const lines = linesForReceipt(rcpt);
+  const slip = $("printSlip");
+  if (!slip || !lines.length) return;
+  const s = lines[0];
+  const tot = lines.reduce((a,l)=>a+(Number(l.line)||0),0);
+  const refund = lines.every(l => l.refund || Number(l.qty)<0);
+  const books = [...new Set(lines.map(l => storeName(l.store)))].join(" · ");
+  const rows = lines.map(l => {
+    const fuel = l.unit==="L";
+    const qty = fuel ? Number(l.qty).toLocaleString("en-PH",{maximumFractionDigits:2})+" L" : "×"+l.qty;
+    return `<tr><td>${esc(l.name)}<div style="font-size:12px;color:#444">${esc(l.code)} · ${esc(storeName(l.store))}</div></td><td style="text-align:right;white-space:nowrap">${qty}</td><td style="text-align:right;white-space:nowrap">${peso(l.line)}</td></tr>`;
+  }).join("");
+  const tend = Number(s.tendered)||0;
+  const ch = s.change!=null ? Number(s.change) : (tend ? tend-tot : 0);
+  slip.innerHTML =
+    `<p style="margin:0 0 6px;font-weight:800;font-size:20px">S&amp;K Register</p>`+
+    `<p style="margin:0 0 8px;font-size:14px">${esc(books)}<br>${refund?"Refund · ":""}Resibo #${esc(s.receipt)}<br>${esc(s.date||"")} ${esc(s.time||"")} · ${esc(s.cashier||"")}<br>${esc(s.payment||"")}</p>`+
+    `<table><tbody>${rows}`+
+    `<tr class="tot"><td>Total</td><td></td><td style="text-align:right">${peso(tot)}</td></tr>`+
+    (tend ? `<tr class="tot"><td>Bayad</td><td></td><td style="text-align:right">${peso(tend)}</td></tr><tr class="tot"><td>Sukli</td><td></td><td style="text-align:right">${peso(ch)}</td></tr>` : "")+
+    `</tbody></table>`+
+    `<p style="margin:10px 0 0;font-size:13px">Salamat / Thank you</p>`;
+  bumpIdle();
+  const done = () => { document.body.classList.remove("printing"); };
+  window.addEventListener("afterprint", done, { once:true });
+  setTimeout(() => { window.print(); }, 50);
+}
+function offerPrint(rcpt) {
+  if (!rcpt) return;
+  const box = $("rPrint");
+  const on = box ? box.checked : DB.printRcpt!==false;
+  if (!on) return;
+  printReceipt(rcpt);
+}
 function refundedQty(lineId) {
   let n = 0;
   STORES.forEach(s => (DB.stores[s.id].sales||[]).forEach(line => {
@@ -2157,9 +2223,11 @@ function postRefund() {
   openRefund(refundRcpt);
   $("refundMsg").textContent = "Refunded "+peso(total)+" · new resibo #"+rcpt+".";
   sndOk();
+  if (confirm("Print refund / I-print ang resibo #"+rcpt+"?")) printReceipt(rcpt);
 }
 $("refundCancel").onclick = () => { refundRcpt = null; $("refundCard").style.display = "none"; $("refundMsg").textContent = ""; };
 $("refundGo").onclick = postRefund;
+if ($("refundPrint")) $("refundPrint").onclick = () => { if (refundRcpt) printReceipt(refundRcpt); };
 function storeName(id) {
   return (STORES.find(x=>x.id===id)||{}).name || id;
 }
@@ -3219,10 +3287,7 @@ if ($("nOpenCrate")) $("nOpenCrate").onclick = () => {
 };
 if ($("reprintBtn")) $("reprintBtn").onclick = () => {
   if (!DB.lastRcpt) return;
-  document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x.dataset.p==="sales"));
-  document.querySelectorAll(".page").forEach(x => x.classList.toggle("on", x.id==="sales"));
-  renderSales();
-  openRefund(DB.lastRcpt);
+  printReceipt(DB.lastRcpt);
   sndTap();
 };
 
